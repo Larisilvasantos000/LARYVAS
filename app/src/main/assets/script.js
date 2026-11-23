@@ -56,11 +56,19 @@ function normalizarObrasBackup(lista) {
     const statusPermitidos = ["Quero ler", "Lendo", "Concluída", "Em espera"];
     const status = statusPermitidos.includes(item.status) ? item.status : "Quero ler";
     const favorito = item.favorita === true || item.favorita === "true" || item.favorita === "True" || item.favorita === 1;
+    // Compatibilidade: transforma os campos antigos scan/link em uma lista de fontes.
+    const fontesAntigas = Array.isArray(item.scans) ? item.scans : [];
+    const fontes = fontesAntigas.map(f => ({ scan: String(f.scan || f.nome || "").trim(), link: String(f.link || "").trim() }))
+      .filter(f => f.scan || f.link);
+    if (!fontes.length && (item.scan || item.link)) {
+      fontes.push({ scan: String(item.scan || "").trim(), link: String(item.link || "").trim() });
+    }
     return {
       id: item.id ?? item.numero ?? `${Date.now()}-${indice}`,
       nome: item.nome.trim(),
-      scan: item.scan || "",
-      link: item.link || "",
+      scan: item.scan || (fontes[0]?.scan ?? ""),
+      link: item.link || (fontes[0]?.link ?? ""),
+      scans: fontes,
       capa,
       status,
       capituloLido: Math.max(0, Number(item.capituloLido) || 0),
@@ -221,9 +229,11 @@ pesquisa.insertAdjacentElement("afterend", seletorStatus);
 async function salvarObras() {
   try {
     await gravarBancoLaryvas(obras);
+    return true;
   } catch (erro) {
     console.error("Falha ao salvar a biblioteca:", erro);
-    alert("Não foi possível salvar as alterações no armazenamento. Faça um backup antes de fechar o app.");
+    alert("Não foi possível salvar as alterações no armazenamento. Suas alterações na tela serão desfeitas. Faça um backup e tente novamente.");
+    throw erro;
   }
 }
 
@@ -314,19 +324,53 @@ grupoCapa.append(labelCapa, campoCapa);
 
 formulario.append(
   criarCampo("Nome da obra *", "nome", "text", true),
-  criarCampo("Scan responsável", "scan"),
-  criarCampo("Link da obra", "link", "url"),
   criarCampo("Capítulo lido", "capituloLido", "number"),
-  criarCampo("Total de capítulos", "totalCapitulos", "number"),
-  grupoCapa
+  criarCampo("Total de capítulos", "totalCapitulos", "number")
 );
+
+// Fontes/scan: cada registro guarda o nome da scan e seu link correspondente.
+const grupoFontes = document.createElement("div");
+grupoFontes.style.cssText = "margin:14px 0;";
+const tituloFontes = document.createElement("h3");
+tituloFontes.textContent = "Scans e links da obra";
+tituloFontes.style.cssText = "color:#c9a5ff;margin:0 0 10px;";
+const listaFontes = document.createElement("div");
+listaFontes.style.cssText = "display:flex;flex-direction:column;gap:12px;";
+const botaoAdicionarFonte = document.createElement("button");
+botaoAdicionarFonte.type = "button";
+botaoAdicionarFonte.textContent = "+ Adicionar outra scan";
+botaoAdicionarFonte.style.cssText = "width:100%;padding:11px;border:1px solid #9570d8;border-radius:10px;background:#29213c;color:#c9a5ff;font-weight:bold;";
+function adicionarCampoFonte(fonte = {}) {
+  const bloco = document.createElement("div");
+  bloco.style.cssText = "padding:12px;border:1px solid #65517d;border-radius:12px;background:#292432;";
+  const numero = document.createElement("p");
+  numero.textContent = `Fonte ${listaFontes.children.length + 1}`;
+  numero.style.cssText = "margin:0 0 8px;color:#c9a5ff;font-weight:bold;";
+  const campoScan = document.createElement("input");
+  campoScan.type = "text"; campoScan.name = "nomeScan"; campoScan.placeholder = "Nome da scan"; campoScan.value = fonte.scan || "";
+  const campoLink = document.createElement("input");
+  campoLink.type = "url"; campoLink.name = "linkScan"; campoLink.placeholder = "https://link-da-obra.com"; campoLink.value = fonte.link || "";
+  [campoScan, campoLink].forEach(campo => { campo.style.cssText = "display:block;width:100%;box-sizing:border-box;margin:7px 0;padding:11px;border:1px solid #65517d;border-radius:9px;background:#211b30;color:white;font-size:14px;"; });
+  const remover = document.createElement("button");
+  remover.type = "button"; remover.textContent = "Remover esta scan";
+  remover.style.cssText = "padding:7px 10px;border:0;border-radius:8px;background:#75435b;color:white;";
+  remover.addEventListener("click", () => { bloco.remove(); [...listaFontes.children].forEach((el,i) => el.querySelector('p').textContent = `Fonte ${i+1}`); });
+  bloco.append(numero, campoScan, campoLink, remover);
+  listaFontes.appendChild(bloco);
+}
+botaoAdicionarFonte.addEventListener("click", () => adicionarCampoFonte());
+grupoFontes.append(tituloFontes, listaFontes, botaoAdicionarFonte);
+formulario.append(grupoFontes, grupoCapa);
+
 if (obraParaEditar) {
   formulario.elements.namedItem("nome").value = obraParaEditar.nome || "";
-  formulario.elements.namedItem("scan").value = obraParaEditar.scan || "";
-  formulario.elements.namedItem("link").value = obraParaEditar.link || "";
-formulario.elements.namedItem("capituloLido").value = obraParaEditar.capituloLido || "";
-formulario.elements.namedItem("totalCapitulos").value = obraParaEditar.totalCapitulos || "";
+  formulario.elements.namedItem("capituloLido").value = obraParaEditar.capituloLido || "";
+  formulario.elements.namedItem("totalCapitulos").value = obraParaEditar.totalCapitulos || "";
 }
+const fontesIniciais = obraParaEditar
+  ? (Array.isArray(obraParaEditar.scans) && obraParaEditar.scans.length ? obraParaEditar.scans : (obraParaEditar.scan || obraParaEditar.link ? [{scan: obraParaEditar.scan || "", link: obraParaEditar.link || ""}] : []))
+  : [{scan:"", link:""}];
+fontesIniciais.forEach(fonte => adicionarCampoFonte(fonte));
   const grupoStatus = document.createElement("div");
   grupoStatus.style.marginBottom = "18px";
 
@@ -420,11 +464,18 @@ if (obraParaEditar) {
     return;
   }
 
+  const fontes = [...listaFontes.children].map(bloco => ({
+    scan: bloco.querySelector('input[name="nomeScan"]').value.trim(),
+    link: bloco.querySelector('input[name="linkScan"]').value.trim()
+  })).filter(fonte => fonte.scan || fonte.link);
+
   const obra = {
     id: obraParaEditar ? obraParaEditar.id : Date.now(),
     nome: dados.get("nome").trim(),
-    scan: dados.get("scan").trim(),
-    link: dados.get("link").trim(),
+    // Mantém os campos antigos sincronizados com a primeira fonte para compatibilidade.
+    scan: fontes[0]?.scan || "",
+    link: fontes[0]?.link || "",
+    scans: fontes,
     capa: imagemCapa,
     status: dados.get("status"),
     capituloLido: Number(dados.get("capituloLido")) || 0,
@@ -446,15 +497,13 @@ totalCapitulos: Number(dados.get("totalCapitulos")) || 0,
   }
 
   try {
-    salvarObras();
+    await salvarObras();
   } catch {
     if (indice >= 0) {
       obras[indice] = obraAnterior;
     } else {
       obras.pop();
     }
-
-    alert("O armazenamento está cheio. Tente uma imagem menor.");
     return;
   }
 
@@ -591,13 +640,34 @@ const resultado = obras.filter(obra => {
     const titulo = document.createElement("h3");
     titulo.textContent = obra.nome;
 
-    const scan = document.createElement("p");
-    scan.textContent = "Scan: " + (obra.scan || "Não informada");
-
     const status = document.createElement("p");
     status.textContent = "Status: " + obra.status;
 
-    card.append(titulo, scan, status);
+    card.append(titulo, status);
+    const fontesCard = Array.isArray(obra.scans) && obra.scans.length
+      ? obra.scans
+      : (obra.scan || obra.link ? [{scan: obra.scan || "Scan", link: obra.link || ""}] : []);
+    if (fontesCard.length) {
+      const listaLinks = document.createElement("div");
+      listaLinks.style.cssText = "display:flex;flex-direction:column;gap:7px;margin:8px 0;";
+      fontesCard.forEach((fonte, indice) => {
+        const linha = document.createElement("div");
+        linha.style.cssText = "padding:8px;border:1px solid #65517d;border-radius:9px;background:#29213c;";
+        const nomeFonte = document.createElement("p");
+        nomeFonte.textContent = fonte.scan || `Scan ${indice + 1}`;
+        nomeFonte.style.cssText = "margin:0 0 5px;color:#c9a5ff;font-weight:bold;";
+        linha.appendChild(nomeFonte);
+        if (fonte.link) {
+          const abrir = document.createElement("a");
+          abrir.href = fonte.link; abrir.textContent = "Abrir obra"; abrir.target = "_blank"; abrir.rel = "noopener noreferrer";
+          linha.appendChild(abrir);
+        } else {
+          const semLink = document.createElement("small"); semLink.textContent = "Link não informado"; linha.appendChild(semLink);
+        }
+        listaLinks.appendChild(linha);
+      });
+      card.appendChild(listaLinks);
+    }
 if (obra.totalCapitulos > 0) {
   const lidos = Number(obra.capituloLido) || 0;
   const total = Number(obra.totalCapitulos);
@@ -676,10 +746,15 @@ favorito.style.cssText = `
   font-weight:bold;
 `;
 
-favorito.addEventListener("click", () => {
+favorito.addEventListener("click", async () => {
+  const favoritoAnterior = obra.favorita;
   obra.favorita = !obra.favorita;
-  salvarObras();
-  mostrarObras(pesquisa.value);
+  try {
+    await salvarObras();
+    mostrarObras(pesquisa.value);
+  } catch {
+    obra.favorita = favoritoAnterior;
+  }
 });
 
 card.appendChild(favorito);
@@ -761,11 +836,16 @@ card.appendChild(favorito);
     confirmar.remove();
   });
 
-  confirmarExclusao.addEventListener("click", () => {
+  confirmarExclusao.addEventListener("click", async () => {
+    const obrasAnteriores = obras;
     obras = obras.filter(item => item.id !== obra.id);
-    salvarObras();
-    mostrarObras(pesquisa.value);
-    confirmar.remove();
+    try {
+      await salvarObras();
+      mostrarObras(pesquisa.value);
+      confirmar.remove();
+    } catch {
+      obras = obrasAnteriores;
+    }
   });
 
   botoesConfirmacao.append(cancelarExclusao, confirmarExclusao);
