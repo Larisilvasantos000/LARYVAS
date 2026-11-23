@@ -1,3 +1,97 @@
+// LARYVAS STORAGE v2 — IndexedDB
+const LARYVAS_DB_NAME = "LARYVAS_DB";
+const LARYVAS_DB_VERSION = 1;
+let laryvasDb;
+
+function abrirBancoLaryvas() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) {
+      reject(new Error("Este WebView não oferece IndexedDB."));
+      return;
+    }
+    const request = indexedDB.open(LARYVAS_DB_NAME, LARYVAS_DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("dados")) {
+        db.createObjectStore("dados", { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Falha ao abrir o banco."));
+    request.onblocked = () => reject(new Error("Feche outras janelas da LARYVAS e tente novamente."));
+  });
+}
+
+function lerBancoLaryvas() {
+  return new Promise((resolve, reject) => {
+    const tx = laryvasDb.transaction("dados", "readonly");
+    const req = tx.objectStore("dados").get("biblioteca");
+    req.onsuccess = () => resolve(req.result ? req.result.obras : null);
+    req.onerror = () => reject(req.error || new Error("Falha ao ler a biblioteca."));
+  });
+}
+
+function gravarBancoLaryvas(lista) {
+  return new Promise((resolve, reject) => {
+    const tx = laryvasDb.transaction("dados", "readwrite");
+    tx.objectStore("dados").put({ id: "biblioteca", obras: lista, atualizadoEm: new Date().toISOString() });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error("Falha ao salvar a biblioteca."));
+    tx.onabort = () => reject(tx.error || new Error("O salvamento foi cancelado."));
+  });
+}
+
+function normalizarObrasBackup(lista) {
+  if (!Array.isArray(lista)) throw new Error("O arquivo não contém uma lista de obras.");
+  return lista.map((item, indice) => {
+    if (!item || typeof item !== "object" || typeof item.nome !== "string" || !item.nome.trim()) {
+      throw new Error(`A obra ${indice + 1} não possui um nome válido.`);
+    }
+    let capa = item.capa || "";
+    if (!capa && item.capaBase64) {
+      capa = String(item.capaBase64);
+      if (!capa.startsWith("data:image/")) capa = `data:image/jpeg;base64,${capa}`;
+    }
+    if (!capa && item.capaUrl) capa = item.capaUrl;
+    const statusPermitidos = ["Quero ler", "Lendo", "Concluída", "Em espera"];
+    const status = statusPermitidos.includes(item.status) ? item.status : "Quero ler";
+    const favorito = item.favorita === true || item.favorita === "true" || item.favorita === "True" || item.favorita === 1;
+    return {
+      id: item.id ?? item.numero ?? `${Date.now()}-${indice}`,
+      nome: item.nome.trim(),
+      scan: item.scan || "",
+      link: item.link || "",
+      capa,
+      status,
+      capituloLido: Math.max(0, Number(item.capituloLido) || 0),
+      totalCapitulos: Math.max(0, Number(item.totalCapitulos) || 0),
+      favorita: favorito
+    };
+  });
+}
+
+async function inicializarArmazenamentoLaryvas() {
+  laryvasDb = await abrirBancoLaryvas();
+  const salvo = await lerBancoLaryvas();
+  if (Array.isArray(salvo)) return normalizarObrasBackup(salvo);
+  // Migração automática da versão antiga: mantém o registro antigo intacto.
+  const legado = localStorage.getItem("laryvasObras");
+  const migrado = legado ? normalizarObrasBackup(JSON.parse(legado)) : [];
+  await gravarBancoLaryvas(migrado);
+  return migrado;
+}
+
+(async function iniciarLaryvas() {
+  let obrasIniciais;
+  try {
+    obrasIniciais = await inicializarArmazenamentoLaryvas();
+  } catch (erro) {
+    alert("Não foi possível abrir o novo armazenamento da LARYVAS: " + erro.message + "\\n\\nNenhum backup foi apagado.");
+    console.error(erro);
+    return;
+  }
+
+let obras = obrasIniciais;
 function lerImagem(arquivo) {
   return new Promise((resolve, reject) => {
     if (!arquivo) {
@@ -124,16 +218,13 @@ seletorStatus.style.cssText = `
 `;
 
 pesquisa.insertAdjacentElement("afterend", seletorStatus);
-let obras = [];
-
-try {
-  obras = JSON.parse(localStorage.getItem("laryvasObras")) || [];
-} catch {
-  obras = [];
-}
-
-function salvarObras() {
-  localStorage.setItem("laryvasObras", JSON.stringify(obras));
+async function salvarObras() {
+  try {
+    await gravarBancoLaryvas(obras);
+  } catch (erro) {
+    console.error("Falha ao salvar a biblioteca:", erro);
+    alert("Não foi possível salvar as alterações no armazenamento. Faça um backup antes de fechar o app.");
+  }
 }
 
 function criarCampo(rotulo, nome, tipo = "text", obrigatorio = false) {
@@ -793,32 +884,13 @@ arquivoRestauracao.addEventListener("change", async () => {
   const arquivo = arquivoRestauracao.files[0];
   if (!arquivo) return;
   try {
-    const dados = JSON.parse(await arquivo.text());
-    if (!Array.isArray(dados) || !dados.every(obra => obra && typeof obra === "object" && typeof obra.nome === "string" && typeof obra.status === "string")) {
-      throw new Error("O arquivo selecionado não é um backup válido da LARYVAS.");
-    }
-    if (!window.confirm(`Este backup contém ${dados.length} obra(s).\
-\
-A biblioteca atual será SUBSTITUÍDA pelo conteúdo do backup.\
-\
-Deseja continuar?`)) return;
-    const anterior = obras;
-    const armazenamentoAnterior = localStorage.getItem("laryvasObras");
-    try {
-      localStorage.setItem("laryvasObras", JSON.stringify(dados));
-      obras = dados;
-      mostrarObras(pesquisa.value);
-      alert(`Biblioteca restaurada com sucesso!\
-${obras.length} obra(s) recuperada(s).`);
-    } catch (erro) {
-      obras = anterior;
-      try {
-        if (armazenamentoAnterior === null) localStorage.removeItem("laryvasObras");
-        else localStorage.setItem("laryvasObras", armazenamentoAnterior);
-      } catch (_) {}
-      mostrarObras(pesquisa.value);
-      throw new Error("Não foi possível restaurar. O armazenamento pode estar cheio.");
-    }
+    const dadosOriginais = JSON.parse(await arquivo.text());
+    const dados = normalizarObrasBackup(dadosOriginais);
+    if (!window.confirm(`Este backup contém ${dados.length} obra(s).\n\nA biblioteca atual será SUBSTITUÍDA pelo conteúdo do backup.\n\nDeseja continuar?`)) return;
+    await gravarBancoLaryvas(dados);
+    obras = dados;
+    mostrarObras(pesquisa.value);
+    alert(`Biblioteca restaurada com sucesso!\n${obras.length} obra(s) recuperada(s).`);
   } catch (erro) {
     alert(erro.message || "Erro ao ler o arquivo de backup.");
   } finally {
@@ -827,3 +899,5 @@ ${obras.length} obra(s) recuperada(s).`);
 });
 
 mostrarObras();
+
+})(); // fim da inicialização assíncrona da LARYVAS
