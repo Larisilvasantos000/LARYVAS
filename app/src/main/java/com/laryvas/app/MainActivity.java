@@ -5,6 +5,9 @@ import android.os.Bundle;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
 import android.webkit.WebChromeClient;
+import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.ValueCallback;
 import android.webkit.JavascriptInterface;
 import android.content.Intent;
@@ -12,24 +15,33 @@ import android.net.Uri;
 import android.provider.MediaStore;
 import android.content.ContentValues;
 import android.widget.Toast;
-import android.util.Base64;
 import java.io.OutputStream;
+import androidx.webkit.WebViewAssetLoader;
 
 public class MainActivity extends Activity {
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private static final int FILE_CHOOSER_REQUEST = 1001;
+    private WebViewAssetLoader assetLoader;
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         webView = new WebView(this);
         setContentView(webView);
+        assetLoader = new WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+            .build();
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
+        settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         webView.addJavascriptInterface(new AppBridge(), "Android");
+        webView.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
@@ -40,7 +52,7 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.loadUrl("https://appassets.androidplatform.net/assets/index.html");
     }
 
     private class AppBridge {
@@ -53,6 +65,7 @@ public class MainActivity extends Activity {
                     Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                     if (uri == null) throw new Exception("Não foi possível criar o arquivo");
                     try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                        if (out == null) throw new Exception("Não foi possível abrir o arquivo");
                         out.write(json.getBytes("UTF-8"));
                     }
                     Toast.makeText(MainActivity.this, "Backup salvo em Downloads", Toast.LENGTH_LONG).show();
