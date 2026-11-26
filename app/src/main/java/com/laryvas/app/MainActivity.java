@@ -1,6 +1,7 @@
 package com.laryvas.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Build;
 import android.os.Environment;
@@ -242,7 +243,25 @@ public class MainActivity extends Activity {
 
     private class AppBridge {
         @JavascriptInterface public void saveBackup(String json) {
-            runOnUiThread(() -> solicitarDestinoBackupManual(json));
+            // O backup manual usa o mesmo destino nativo já validado pelos backups
+            // automáticos: Downloads no Android 10+ e pasta privada do app no Android 6–9.
+            runOnUiThread(() -> {
+                if (json == null || json.trim().isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Não há dados para salvar no backup", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                try {
+                    gravarBackupAutomatico(nomeBackup("LARYVAS-manual-"), json);
+                    String destino = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                        ? "Downloads"
+                        : "Downloads privado do aplicativo";
+                    Toast.makeText(MainActivity.this,
+                        "Backup manual salvo em " + destino, Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this,
+                        "Falha ao salvar o backup manual: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            });
         }
 
         @JavascriptInterface public synchronized boolean shouldCreateAutomaticBackup() {
@@ -310,8 +329,18 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() {
-        // O WebView contém apenas a biblioteca local; links externos abrem no navegador.
-        super.onBackPressed();
+        if (webView == null) { super.onBackPressed(); return; }
+        webView.evaluateJavascript(
+            "window.laryvasHandleAndroidBack ? window.laryvasHandleAndroidBack() : false",
+            value -> {
+                if ("true".equals(value)) return;
+                new AlertDialog.Builder(MainActivity.this)
+                    .setMessage("Deseja sair do LARYVAS?")
+                    .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("Sair", (dialog, which) -> finish())
+                    .show();
+            }
+        );
     }
 
     @Override protected void onDestroy() {

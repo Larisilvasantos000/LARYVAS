@@ -215,3 +215,18 @@ text-decoration: none;
 cursor: pointer;
 font-weight: bold;
 }
+
+/* LARYVAS V3.1 — catálogo limpo, com configurações no topo */
+.biblioteca > h2 { margin: 0; }
+#lista-obras { align-items: start; }
+.card-obra { padding: 8px; border-radius: 13px; }
+.capa-obra { border-radius: 9px; margin-bottom: 8px; }
+.card-obra h3 { font-size: clamp(11px, 3.2vw, 14px); line-height: 1.25; }
+#painel-estatisticas { margin: 14px 0 18px !important; }
+#tela-configuracoes button { min-height: 42px; }
+#tela-configuracoes details { margin-top: 14px; }
+@media (max-width: 420px) {
+  .biblioteca { padding: 18px 12px; }
+  .grade-obras { gap: 9px; }
+  .card-obra { padding: 7px; }
+}

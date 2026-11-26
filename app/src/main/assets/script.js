@@ -413,10 +413,7 @@ seletorColunas.style.cssText = `
   font-size:15px;
 `;
 
-document.querySelector(".subtitulo").insertAdjacentElement(
-  "afterend",
-  seletorColunas
-);
+// O seletor de colunas fica nas configurações, fora da tela principal.
 const colunasConfiguradas = localStorage.getItem("laryvasColunas") || "3";
 const colunasSalvas = ["2", "3", "4", "5", "6"].includes(colunasConfiguradas) ? colunasConfiguradas : "3";
 
@@ -533,7 +530,6 @@ contadorSelecao.style.cssText = "margin:9px 0;color:#c9a5ff;font-weight:bold;";
 const acoesLote = document.createElement("div");
 acoesLote.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:8px;";
 function botaoLote(texto, cor="#393044") { const b=document.createElement("button"); b.type="button"; b.textContent=texto; b.style.cssText=`padding:10px;border:1px solid #9570d8;border-radius:8px;background:${cor};color:white;font-weight:bold;`; return b; }
-const loteFavoritar = botaoLote("☆ Alternar favoritas");
 const loteCategoria = botaoLote("＋ Categoria nas selecionadas");
 const loteStatus = document.createElement("select");
 loteStatus.innerHTML = '<option value="">Alterar status...</option><option>Quero ler</option><option>Lendo</option><option>Concluída</option><option>Em espera</option>';
@@ -541,7 +537,7 @@ loteStatus.style.cssText = "padding:10px;border:1px solid #9570d8;border-radius:
 const loteExcluir = botaoLote("Mover para lixeira", "#75435b");
 const abrirLixeira = botaoLote(`🗑️ Lixeira (${lixeira.length})`);
 linhaSelecao.append(selecionarVisiveis, limparSelecao);
-acoesLote.append(loteFavoritar, loteStatus, loteCategoria, loteExcluir, abrirLixeira);
+acoesLote.append(loteStatus, loteCategoria, loteExcluir, abrirLixeira);
 painelAcoesLote.append(linhaSelecao, contadorSelecao, acoesLote);
 listaObras.insertAdjacentElement("beforebegin", painelAcoesLote);
 
@@ -571,7 +567,6 @@ function obraCorrespondeBusca(o, termo) {
 function obrasVisiveis() { const termo = pesquisa.value.toLocaleLowerCase("pt-BR").trim(); return obras.filter(o => obraCorrespondeBusca(o, termo) && (filtroStatus === "Todos" || o.status === filtroStatus || (filtroStatus === "Favoritas" && o.favorita)) && (filtroCategoria === "Todas" || (o.categorias || []).includes(filtroCategoria))); }
 selecionarVisiveis.addEventListener("click", () => { obrasVisiveis().forEach(o => obrasSelecionadas.add(String(o.id))); mostrarObras(pesquisa.value); });
 limparSelecao.addEventListener("click", () => { obrasSelecionadas.clear(); mostrarObras(pesquisa.value); });
-loteFavoritar.addEventListener("click", async () => { const ids=[...obrasSelecionadas]; if(!ids.length){alert("Selecione pelo menos uma obra.");return;} const antes=obras.map(o=>({...o})); const todosFavoritos = obras.filter(o=>ids.includes(String(o.id))).every(o=>o.favorita === true); obras.forEach(o=>{if(ids.includes(String(o.id))){o.favorita=!todosFavoritos;o.atualizadoEm=new Date().toISOString();}}); try{await salvarObras();obrasSelecionadas.clear();mostrarObras(pesquisa.value);}catch{obras=antes;} });
 loteCategoria.addEventListener("click", async () => {
   const ids=[...obrasSelecionadas];
   if(!ids.length){alert("Selecione pelo menos uma obra.");return;}
@@ -586,7 +581,7 @@ loteStatus.addEventListener("change", async () => { const status=loteStatus.valu
 loteExcluir.addEventListener("click", async () => { const ids=[...obrasSelecionadas]; if(!ids.length){alert("Selecione pelo menos uma obra.");return;} if(!confirm(`Mover ${ids.length} obra(s) para a lixeira? Elas poderão ser restauradas depois.`))return; const removidas=obras.filter(o=>ids.includes(String(o.id))).map(o=>({...o, excluidaEm:new Date().toISOString()})); const obrasAntes=obras; const lixeiraAntes=lixeira; obras=obras.filter(o=>!ids.includes(String(o.id))); lixeira=[...lixeira,...removidas]; try{await gravarBibliotecaELixeira(obras, lixeira);await backupAutomaticoSeNecessario(obras, lixeira);obrasSelecionadas.clear();atualizarBotaoLixeira();mostrarObras(pesquisa.value);}catch(e){obras=obrasAntes;lixeira=lixeiraAntes;alert("Não foi possível concluir a exclusão em lote. Nenhuma obra foi considerada removida.");} });
 function atualizarBotaoLixeira(){abrirLixeira.textContent=`🗑️ Lixeira (${lixeira.length})`;}
 abrirLixeira.addEventListener("click", () => {
-  const modal=document.createElement("div"); modal.style.cssText="position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.88);padding:18px;overflow:auto;";
+  const modal=document.createElement("div"); modal.id="modal-lixeira"; modal.style.cssText="position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.88);padding:18px;overflow:auto;";
   const caixa=document.createElement("div"); caixa.style.cssText="max-width:520px;margin:25px auto;background:#211b30;color:white;padding:18px;border-radius:14px;";
   const titulo=document.createElement("h2"); titulo.textContent=`Lixeira (${lixeira.length})`; titulo.style.color="#c9a5ff"; caixa.appendChild(titulo);
   const fechar=botaoLote("Fechar"); fechar.addEventListener("click",()=>modal.remove()); caixa.appendChild(fechar);
@@ -1538,7 +1533,11 @@ tituloConfiguracoes.style.cssText = "color:#c9a5ff;margin-bottom:6px;";
 const descricaoConfiguracoes = document.createElement("p");
 descricaoConfiguracoes.textContent = "Gerencie sua biblioteca, faça cópias de segurança e organize suas obras.";
 descricaoConfiguracoes.style.cssText = "color:#aaa0b8;font-size:13px;margin-bottom:18px;";
-telaConfiguracoes.append(voltarBiblioteca, tituloConfiguracoes, descricaoConfiguracoes, painelAcoesLote, painelBackup);
+const rotuloColunas = document.createElement("label");
+rotuloColunas.textContent = "Quantidade de colunas da biblioteca";
+rotuloColunas.style.cssText = "display:block;margin:18px 0 6px;color:#d8c4f5;font-weight:bold;";
+seletorColunas.style.margin = "0 0 18px";
+telaConfiguracoes.append(voltarBiblioteca, tituloConfiguracoes, descricaoConfiguracoes, rotuloColunas, seletorColunas, painelAcoesLote, painelBackup);
 secaoBiblioteca.appendChild(telaConfiguracoes);
 const conteudoBiblioteca = [...secaoBiblioteca.children].filter(el => el !== telaConfiguracoes);
 const displaysBiblioteca = new Map(conteudoBiblioteca.map(el => [el, el.style.display]));
@@ -1558,13 +1557,30 @@ function fecharConfiguracoes() {
   botaoConfiguracoes.style.display = "block";
   window.scrollTo(0, rolagemBibliotecaSalva);
 }
+const cabecalhoBiblioteca = secaoBiblioteca.querySelector("h2");
+const linhaTituloBiblioteca = document.createElement("div");
+linhaTituloBiblioteca.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;";
+cabecalhoBiblioteca.parentNode.insertBefore(linhaTituloBiblioteca, cabecalhoBiblioteca);
+linhaTituloBiblioteca.appendChild(cabecalhoBiblioteca);
 const botaoConfiguracoes = document.createElement("button");
 botaoConfiguracoes.type = "button";
-botaoConfiguracoes.textContent = "⚙ Configurações";
-botaoConfiguracoes.style.cssText = "display:block;width:100%;margin-top:12px;padding:12px;border:1px solid #65517d;border-radius:10px;background:#292432;color:#c9a5ff;font-weight:bold;";
+botaoConfiguracoes.setAttribute("aria-label", "Abrir configurações");
+botaoConfiguracoes.title = "Configurações";
+botaoConfiguracoes.textContent = "⚙";
+botaoConfiguracoes.style.cssText = "flex:0 0 46px;width:46px;height:46px;border:0;border-radius:14px;background:#302541;color:#d5b4ff;font-size:24px;display:grid;place-items:center;";
 botaoConfiguracoes.addEventListener("click", abrirConfiguracoes);
 voltarBiblioteca.addEventListener("click", fecharConfiguracoes);
-secaoBiblioteca.insertBefore(botaoConfiguracoes, telaConfiguracoes);
+linhaTituloBiblioteca.appendChild(botaoConfiguracoes);
+
+// Retorno do botão físico/nativo do Android: fecha camadas antes de oferecer saída.
+window.laryvasHandleAndroidBack = function() {
+  const modalEdicao = document.getElementById("modal-estante");
+  if (modalEdicao) { modalEdicao.remove(); return true; }
+  const modalLixeira = document.getElementById("modal-lixeira");
+  if (modalLixeira) { modalLixeira.remove(); return true; }
+  if (!telaConfiguracoes.hidden) { fecharConfiguracoes(); return true; }
+  return false;
+};
 
 mostrarObras();
 

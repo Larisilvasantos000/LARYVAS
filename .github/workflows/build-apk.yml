@@ -1,4 +1,4 @@
-name: Build LARYVAS V3 APK
+name: Build LARYVAS V3.1 APK
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     branches:
       - desenvolvimento-v3
       - validacao-v3-integrada
+      - validacao-v3.1
 
 permissions:
   contents: read
@@ -63,7 +64,7 @@ jobs:
           test -s "$RUNNER_TEMP/laryvas-release.jks"
           keytool -list -keystore "$RUNNER_TEMP/laryvas-release.jks" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
 
-      - name: Compilar APK V3 assinado
+      - name: Compilar APK V3.1 assinado
         env:
           LARYVAS_KEYSTORE_PATH: ${{ runner.temp }}/laryvas-release.jks
           LARYVAS_STORE_PASSWORD: ${{ secrets.LARYVAS_STORE_PASSWORD }}
@@ -74,6 +75,6 @@ jobs:
       - name: Salvar APK
         uses: actions/upload-artifact@v4
         with:
-          name: LARYVAS-V3-release-apk
+          name: LARYVAS-V3.1-release-apk
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
