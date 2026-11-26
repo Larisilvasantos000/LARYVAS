@@ -16,7 +16,14 @@ function abrirBancoLaryvas() {
         db.createObjectStore("dados", { keyPath: "id" });
       }
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => {
+        db.close();
+        if (laryvasDb === db) laryvasDb = null;
+      };
+      resolve(db);
+    };
     request.onerror = () => reject(request.error || new Error("Falha ao abrir o banco."));
     request.onblocked = () => reject(new Error("Feche outras janelas da LARYVAS e tente novamente."));
   });
@@ -24,14 +31,29 @@ function abrirBancoLaryvas() {
 
 function lerBancoLaryvas() {
   return new Promise((resolve, reject) => {
+    let resultado;
     const tx = laryvasDb.transaction("dados", "readonly");
     const req = tx.objectStore("dados").get("biblioteca");
-    req.onsuccess = () => resolve(req.result ? req.result.obras : null);
+    req.onsuccess = () => {
+      if (req.result === undefined) {
+        resultado = null; // Registro ainda não existe: permite migração legada controlada.
+      } else if (req.result && Array.isArray(req.result.obras)) {
+        resultado = req.result.obras;
+      } else {
+        tx.abort();
+        reject(new Error("O registro da biblioteca está corrompido ou incompleto. Nenhum dado foi alterado."));
+      }
+    };
     req.onerror = () => reject(req.error || new Error("Falha ao ler a biblioteca."));
+    tx.oncomplete = () => resolve(resultado);
+    tx.onerror = () => reject(tx.error || new Error("Falha na transação de leitura da biblioteca."));
+    tx.onabort = () => reject(tx.error || new Error("A leitura da biblioteca foi cancelada."));
   });
 }
 
 function gravarBancoLaryvas(lista) {
+  if (!Array.isArray(lista)) return Promise.reject(new Error("A biblioteca não está em um formato válido. O salvamento foi cancelado."));
+  try { validarIdsBackup(lista, []); } catch (erro) { return Promise.reject(erro); }
   return new Promise((resolve, reject) => {
     const tx = laryvasDb.transaction("dados", "readwrite");
     tx.objectStore("dados").put({ id: "biblioteca", obras: lista, atualizadoEm: new Date().toISOString() });
@@ -43,14 +65,29 @@ function gravarBancoLaryvas(lista) {
 
 function lerLixeiraLaryvas() {
   return new Promise((resolve, reject) => {
+    let resultado = [];
     const tx = laryvasDb.transaction("dados", "readonly");
     const req = tx.objectStore("dados").get("lixeira");
-    req.onsuccess = () => resolve(req.result && Array.isArray(req.result.itens) ? req.result.itens : []);
+    req.onsuccess = () => {
+      if (req.result === undefined) {
+        resultado = [];
+      } else if (req.result && Array.isArray(req.result.itens)) {
+        resultado = req.result.itens;
+      } else {
+        tx.abort();
+        reject(new Error("O registro da lixeira está inválido. Nenhum dado foi alterado."));
+      }
+    };
     req.onerror = () => reject(req.error || new Error("Falha ao ler a lixeira."));
+    tx.oncomplete = () => resolve(resultado);
+    tx.onerror = () => reject(tx.error || new Error("Falha na transação de leitura da lixeira."));
+    tx.onabort = () => reject(tx.error || new Error("A leitura da lixeira foi cancelada."));
   });
 }
 
 function gravarLixeiraLaryvas(itens) {
+  if (!Array.isArray(itens)) return Promise.reject(new Error("A lixeira não está em um formato válido. O salvamento foi cancelado."));
+  try { validarIdsBackup([], itens); } catch (erro) { return Promise.reject(erro); }
   return new Promise((resolve, reject) => {
     const tx = laryvasDb.transaction("dados", "readwrite");
     tx.objectStore("dados").put({ id: "lixeira", itens, atualizadoEm: new Date().toISOString() });
@@ -61,6 +98,8 @@ function gravarLixeiraLaryvas(itens) {
 }
 
 function gravarBibliotecaELixeira(obrasLista, lixeiraLista) {
+  if (!Array.isArray(obrasLista) || !Array.isArray(lixeiraLista)) return Promise.reject(new Error("Biblioteca ou lixeira em formato inválido. Nenhum dado foi gravado."));
+  try { validarIdsBackup(obrasLista, lixeiraLista); } catch (erro) { return Promise.reject(erro); }
   return new Promise((resolve, reject) => {
     const tx = laryvasDb.transaction("dados", "readwrite");
     const store = tx.objectStore("dados");
@@ -72,8 +111,28 @@ function gravarBibliotecaELixeira(obrasLista, lixeiraLista) {
   });
 }
 
-function normalizarObrasBackup(lista) {
+let contadorIdsBackupGerados = 0;
+
+function gerarIdBackupUnico(idsReservados) {
+  let id;
+  do {
+    contadorIdsBackupGerados += 1;
+    id = `backup-${Date.now()}-${contadorIdsBackupGerados}-${Math.random().toString(36).slice(2, 9)}`;
+  } while (idsReservados.has(String(id)));
+  idsReservados.add(String(id));
+  return id;
+}
+
+function normalizarObrasBackup(lista, idsReservados = new Set()) {
   if (!Array.isArray(lista)) throw new Error("O arquivo não contém uma lista de obras.");
+
+  // Reserva primeiro todos os IDs existentes para que um ID gerado não colida
+  // com um registro que apareça mais adiante na mesma lista.
+  lista.forEach(item => {
+    const idExistente = item && typeof item === "object" ? (item.id ?? item.numero) : null;
+    if (idExistente !== null && idExistente !== undefined) idsReservados.add(String(idExistente));
+  });
+
   return lista.map((item, indice) => {
     if (!item || typeof item !== "object" || typeof item.nome !== "string" || !item.nome.trim()) {
       throw new Error(`A obra ${indice + 1} não possui um nome válido.`);
@@ -89,21 +148,27 @@ function normalizarObrasBackup(lista) {
     const favorito = item.favorita === true || item.favorita === "true" || item.favorita === "True" || item.favorita === 1;
     // Compatibilidade: transforma os campos antigos scan/link em uma lista de fontes.
     const fontesAntigas = Array.isArray(item.scans) ? item.scans : [];
-    const fontes = fontesAntigas.map(f => ({ scan: String(f.scan || f.nome || "").trim(), link: String(f.link || "").trim() }))
-      .filter(f => f.scan || f.link);
+    const fontes = fontesAntigas.map((f, indiceFonte) => {
+      if (!f || typeof f !== "object" || Array.isArray(f)) {
+        throw new Error(`A obra "${item.nome.trim()}" contém uma fonte inválida (${indiceFonte + 1}).`);
+      }
+      return { scan: String(f.scan || f.nome || "").trim(), link: String(f.link || "").trim() };
+    }).filter(f => f.scan || f.link);
     if (!fontes.length && (item.scan || item.link)) {
       fontes.push({ scan: String(item.scan || "").trim(), link: String(item.link || "").trim() });
     }
+    const capituloLido = Number(item.capituloLido);
+    const totalCapitulos = Number(item.totalCapitulos);
     return {
-      id: item.id ?? item.numero ?? `${Date.now()}-${indice}`,
+      id: item.id ?? item.numero ?? gerarIdBackupUnico(idsReservados),
       nome: item.nome.trim(),
-      scan: item.scan || (fontes[0]?.scan ?? ""),
-      link: item.link || (fontes[0]?.link ?? ""),
+      scan: String(item.scan || (fontes[0]?.scan ?? "")).trim(),
+      link: String(item.link || (fontes[0]?.link ?? "")).trim(),
       scans: fontes,
       capa,
       status,
-      capituloLido: Math.max(0, Number(item.capituloLido) || 0),
-      totalCapitulos: Math.max(0, Number(item.totalCapitulos) || 0),
+      capituloLido: Number.isFinite(capituloLido) ? Math.max(0, capituloLido) : 0,
+      totalCapitulos: Number.isFinite(totalCapitulos) ? Math.max(0, totalCapitulos) : 0,
       favorita: favorito,
       categorias: Array.isArray(item.categorias) ? [...new Set(item.categorias.map(c => String(c).trim()).filter(Boolean))] : [],
       capitulosFavoritos: Array.isArray(item.capitulosFavoritos) ? [...new Set(item.capitulosFavoritos.map(v => String(v).trim()).filter(Boolean))] : [],
@@ -113,17 +178,91 @@ function normalizarObrasBackup(lista) {
   });
 }
 
-function criarConteudoBackup() {
-  return { formato: "LARYVAS_BACKUP", versao: 3, criadoEm: new Date().toISOString(), obras, lixeira };
+function validarIdsBackup(obrasBackup, lixeiraBackup) {
+  const ids = new Set();
+  for (const [grupo, lista] of [["biblioteca", obrasBackup], ["lixeira", lixeiraBackup]]) {
+    lista.forEach((obra, indice) => {
+      const id = obra?.id;
+      if ((typeof id !== "string" && typeof id !== "number") || String(id).trim() === "") {
+        throw new Error(`Backup inválido: identificador ausente ou inválido na ${grupo}, item ${indice + 1}.`);
+      }
+      const chave = String(id);
+      if (ids.has(chave)) {
+        throw new Error(`Backup inválido: identificador duplicado (${chave}). Nenhum dado foi alterado.`);
+      }
+      ids.add(chave);
+    });
+  }
+}
+
+function lerEstruturaBackupRestauracao(origem) {
+  // Formato legado: somente uma lista de obras.
+  if (Array.isArray(origem)) {
+    const biblioteca = normalizarObrasBackup(origem);
+    validarIdsBackup(biblioteca, []);
+    return { biblioteca, lixeira: [] };
+  }
+
+  if (!origem || typeof origem !== "object" || Array.isArray(origem)) {
+    throw new Error("Backup inválido: o conteúdo do arquivo não é reconhecido.");
+  }
+  if (origem.formato != null && origem.formato !== "LARYVAS_BACKUP") {
+    throw new Error("Este arquivo foi identificado como um formato de backup desconhecido.");
+  }
+  if (!Array.isArray(origem.obras) || !Array.isArray(origem.lixeira)) {
+    throw new Error("Backup inválido: são necessárias listas válidas para a biblioteca e a lixeira.");
+  }
+
+  // Compartilha a reserva entre biblioteca e lixeira: IDs gerados em uma
+  // lista não podem repetir IDs existentes ou gerados na outra.
+  const idsReservados = new Set();
+  [...origem.obras, ...origem.lixeira].forEach(item => {
+    const idExistente = item && typeof item === "object" ? (item.id ?? item.numero) : null;
+    if (idExistente !== null && idExistente !== undefined) idsReservados.add(String(idExistente));
+  });
+  const biblioteca = normalizarObrasBackup(origem.obras, idsReservados);
+  const itensLixeira = normalizarObrasBackup(origem.lixeira, idsReservados);
+  validarIdsBackup(biblioteca, itensLixeira);
+  return { biblioteca, lixeira: itensLixeira };
+}
+
+function criarConteudoBackup(obrasLista, lixeiraLista) {
+  return { formato: "LARYVAS_BACKUP", versao: 3, criadoEm: new Date().toISOString(), obras: obrasLista, lixeira: lixeiraLista };
 }
 
 async function inicializarArmazenamentoLaryvas() {
   laryvasDb = await abrirBancoLaryvas();
   const salvo = await lerBancoLaryvas();
-  if (Array.isArray(salvo)) return normalizarObrasBackup(salvo);
-  // Migração automática da versão antiga: mantém o registro antigo intacto.
+
+  if (salvo !== null) {
+    if (!Array.isArray(salvo)) {
+      throw new Error("O registro da biblioteca está inválido. Nenhum dado foi alterado.");
+    }
+    const normalizadas = normalizarObrasBackup(salvo);
+    validarIdsBackup(normalizadas, []);
+    return normalizadas;
+  }
+
+  // Migração segura: só cria o novo registro se encontrar dados antigos.
   const legado = localStorage.getItem("laryvasObras");
-  const migrado = legado ? normalizarObrasBackup(JSON.parse(legado)) : [];
+
+  if (legado === null) {
+    throw new Error("Nenhuma biblioteca encontrada. Importe um backup para continuar.");
+  }
+
+  let dadosLegados;
+  try {
+    dadosLegados = JSON.parse(legado);
+  } catch {
+    throw new Error("Os dados antigos estão inválidos. Nenhum dado foi alterado.");
+  }
+
+  if (!Array.isArray(dadosLegados)) {
+    throw new Error("O formato dos dados antigos é inválido. Nenhum dado foi alterado.");
+  }
+
+  const migrado = normalizarObrasBackup(dadosLegados);
+  validarIdsBackup(migrado, []);
   await gravarBancoLaryvas(migrado);
   return migrado;
 }
@@ -140,7 +279,14 @@ async function inicializarArmazenamentoLaryvas() {
 
 let obras = obrasIniciais;
 let lixeira = [];
-try { lixeira = await lerLixeiraLaryvas(); } catch (erro) { console.error("Não foi possível carregar a lixeira:", erro); }
+try {
+  lixeira = await lerLixeiraLaryvas();
+  validarIdsBackup(obras, lixeira);
+} catch (erro) {
+  console.error("Não foi possível carregar ou validar a lixeira:", erro);
+  alert("Não foi possível validar a biblioteca e a lixeira da LARYVAS. Nenhuma alteração será realizada. Faça uma cópia dos dados e tente novamente.");
+  return;
+}
 const obrasSelecionadas = new Set();
 function lerImagem(arquivo) {
   return new Promise((resolve, reject) => {
@@ -271,7 +417,8 @@ document.querySelector(".subtitulo").insertAdjacentElement(
   "afterend",
   seletorColunas
 );
-const colunasSalvas = localStorage.getItem("laryvasColunas") || "3";
+const colunasConfiguradas = localStorage.getItem("laryvasColunas") || "3";
+const colunasSalvas = ["2", "3", "4", "5", "6"].includes(colunasConfiguradas) ? colunasConfiguradas : "3";
 
 seletorColunas.value = colunasSalvas;
 
@@ -399,6 +546,23 @@ painelAcoesLote.append(linhaSelecao, contadorSelecao, acoesLote);
 listaObras.insertAdjacentElement("beforebegin", painelAcoesLote);
 
 function atualizarContadorSelecao() { contadorSelecao.textContent = `${obrasSelecionadas.size} obra(s) selecionada(s)`; }
+function urlHttpSegura(valor) {
+  const texto = String(valor || "").trim();
+  if (!texto) return "";
+  try {
+    const url = new URL(texto);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function urlImagemSegura(valor) {
+  const texto = String(valor || "").trim();
+  if (/^data:image\/(?:jpeg|png|webp|gif);base64,/i.test(texto)) return texto;
+  return urlHttpSegura(texto);
+}
+
 function obraCorrespondeBusca(o, termo) {
   if (!termo) return true;
   const fontes = Array.isArray(o.scans) ? o.scans : [{ scan: o.scan || "", link: o.link || "" }];
@@ -419,7 +583,7 @@ loteCategoria.addEventListener("click", async () => {
   try{await salvarObras();obrasSelecionadas.clear();mostrarObras(pesquisa.value);}catch{obras=antes;}
 });
 loteStatus.addEventListener("change", async () => { const status=loteStatus.value; const ids=[...obrasSelecionadas]; if(!status)return; if(!ids.length){alert("Selecione pelo menos uma obra.");loteStatus.value="";return;} const antes=obras.map(o=>({...o})); obras.forEach(o=>{if(ids.includes(String(o.id))){o.status=status;o.atualizadoEm=new Date().toISOString();}}); try{await salvarObras();obrasSelecionadas.clear();mostrarObras(pesquisa.value);}catch{obras=antes;} loteStatus.value=""; });
-loteExcluir.addEventListener("click", async () => { const ids=[...obrasSelecionadas]; if(!ids.length){alert("Selecione pelo menos uma obra.");return;} if(!confirm(`Mover ${ids.length} obra(s) para a lixeira? Elas poderão ser restauradas depois.`))return; const removidas=obras.filter(o=>ids.includes(String(o.id))).map(o=>({...o, excluidaEm:new Date().toISOString()})); const obrasAntes=obras; const lixeiraAntes=lixeira; obras=obras.filter(o=>!ids.includes(String(o.id))); lixeira=[...lixeira,...removidas]; try{await gravarBibliotecaELixeira(obras, lixeira);await backupAutomaticoSeNecessario();obrasSelecionadas.clear();atualizarBotaoLixeira();mostrarObras(pesquisa.value);}catch(e){obras=obrasAntes;lixeira=lixeiraAntes;alert("Não foi possível concluir a exclusão em lote. Nenhuma obra foi considerada removida.");} });
+loteExcluir.addEventListener("click", async () => { const ids=[...obrasSelecionadas]; if(!ids.length){alert("Selecione pelo menos uma obra.");return;} if(!confirm(`Mover ${ids.length} obra(s) para a lixeira? Elas poderão ser restauradas depois.`))return; const removidas=obras.filter(o=>ids.includes(String(o.id))).map(o=>({...o, excluidaEm:new Date().toISOString()})); const obrasAntes=obras; const lixeiraAntes=lixeira; obras=obras.filter(o=>!ids.includes(String(o.id))); lixeira=[...lixeira,...removidas]; try{await gravarBibliotecaELixeira(obras, lixeira);await backupAutomaticoSeNecessario(obras, lixeira);obrasSelecionadas.clear();atualizarBotaoLixeira();mostrarObras(pesquisa.value);}catch(e){obras=obrasAntes;lixeira=lixeiraAntes;alert("Não foi possível concluir a exclusão em lote. Nenhuma obra foi considerada removida.");} });
 function atualizarBotaoLixeira(){abrirLixeira.textContent=`🗑️ Lixeira (${lixeira.length})`;}
 abrirLixeira.addEventListener("click", () => {
   const modal=document.createElement("div"); modal.style.cssText="position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.88);padding:18px;overflow:auto;";
@@ -427,8 +591,8 @@ abrirLixeira.addEventListener("click", () => {
   const titulo=document.createElement("h2"); titulo.textContent=`Lixeira (${lixeira.length})`; titulo.style.color="#c9a5ff"; caixa.appendChild(titulo);
   const fechar=botaoLote("Fechar"); fechar.addEventListener("click",()=>modal.remove()); caixa.appendChild(fechar);
   if(!lixeira.length){const p=document.createElement("p");p.textContent="A lixeira está vazia.";caixa.appendChild(p);}
-  lixeira.slice().reverse().forEach(item=>{const linha=document.createElement("div");linha.style.cssText="padding:12px 0;border-bottom:1px solid #51445f;";const nome=document.createElement("strong");nome.textContent=item.nome;const data=document.createElement("small");data.textContent="\nExcluída em: "+new Date(item.excluidaEm).toLocaleString("pt-BR");data.style.display="block";const restaurar=botaoLote("Restaurar");restaurar.style.marginTop="8px";restaurar.addEventListener("click",async()=>{if(obras.some(o=>String(o.id)===String(item.id))){alert("Já existe uma obra com esse identificador na biblioteca.");return;}const novaLixeira=lixeira.filter(o=>!(String(o.id)===String(item.id)&&o.excluidaEm===item.excluidaEm));const novasObras=[...obras,{...item}];delete novasObras[novasObras.length-1].excluidaEm;try{await gravarBibliotecaELixeira(novasObras, novaLixeira);obras=novasObras;lixeira=novaLixeira;await backupAutomaticoSeNecessario();lixeira=novaLixeira;atualizarBotaoLixeira();modal.remove();mostrarObras(pesquisa.value);}catch{alert("Não foi possível restaurar a obra.");}});const apagarDefinitivo=botaoLote("Excluir definitivamente","#75435b");apagarDefinitivo.style.margin="8px 0 0 6px";apagarDefinitivo.addEventListener("click",async()=>{if(!confirm(`Excluir definitivamente "${item.nome}"? Esta ação não poderá ser desfeita.`))return;const novaLixeira=lixeira.filter(o=>!(String(o.id)===String(item.id)&&o.excluidaEm===item.excluidaEm));try{await gravarLixeiraLaryvas(novaLixeira);lixeira=novaLixeira;await backupAutomaticoSeNecessario();atualizarBotaoLixeira();modal.remove();abrirLixeira.click();}catch{alert("Não foi possível excluir definitivamente a obra.");}});linha.append(nome,data,restaurar,apagarDefinitivo);caixa.appendChild(linha);});
-  if(lixeira.length){const apagarTudo=botaoLote("Esvaziar lixeira definitivamente","#75435b");apagarTudo.style.marginTop="14px";apagarTudo.addEventListener("click",async()=>{if(!confirm(`Apagar definitivamente ${lixeira.length} obra(s)? Esta ação não poderá ser desfeita.`))return;try{await gravarLixeiraLaryvas([]);lixeira=[];await backupAutomaticoSeNecessario();atualizarBotaoLixeira();modal.remove();}catch{alert("Não foi possível esvaziar a lixeira.");}});caixa.appendChild(apagarTudo);}
+  lixeira.slice().reverse().forEach(item=>{const linha=document.createElement("div");linha.style.cssText="padding:12px 0;border-bottom:1px solid #51445f;";const nome=document.createElement("strong");nome.textContent=item.nome;const data=document.createElement("small");data.textContent="\nExcluída em: "+new Date(item.excluidaEm).toLocaleString("pt-BR");data.style.display="block";const restaurar=botaoLote("Restaurar");restaurar.style.marginTop="8px";restaurar.addEventListener("click",async()=>{if(obras.some(o=>String(o.id)===String(item.id))){alert("Já existe uma obra com esse identificador na biblioteca.");return;}const novaLixeira=lixeira.filter(o=>!(String(o.id)===String(item.id)&&o.excluidaEm===item.excluidaEm));const novasObras=[...obras,{...item}];delete novasObras[novasObras.length-1].excluidaEm;try{await gravarBibliotecaELixeira(novasObras, novaLixeira);obras=novasObras;lixeira=novaLixeira;await backupAutomaticoSeNecessario(obras, lixeira);lixeira=novaLixeira;atualizarBotaoLixeira();modal.remove();mostrarObras(pesquisa.value);}catch{alert("Não foi possível restaurar a obra.");}});const apagarDefinitivo=botaoLote("Excluir definitivamente","#75435b");apagarDefinitivo.style.margin="8px 0 0 6px";apagarDefinitivo.addEventListener("click",async()=>{if(!confirm(`Excluir definitivamente "${item.nome}"? Esta ação não poderá ser desfeita.`))return;const novaLixeira=lixeira.filter(o=>!(String(o.id)===String(item.id)&&o.excluidaEm===item.excluidaEm));try{await gravarLixeiraLaryvas(novaLixeira);lixeira=novaLixeira;await backupAutomaticoSeNecessario(obras, lixeira);atualizarBotaoLixeira();modal.remove();abrirLixeira.click();}catch{alert("Não foi possível excluir definitivamente a obra.");}});linha.append(nome,data,restaurar,apagarDefinitivo);caixa.appendChild(linha);});
+  if(lixeira.length){const apagarTudo=botaoLote("Esvaziar lixeira definitivamente","#75435b");apagarTudo.style.marginTop="14px";apagarTudo.addEventListener("click",async()=>{if(!confirm(`Apagar definitivamente ${lixeira.length} obra(s)? Esta ação não poderá ser desfeita.`))return;try{await gravarLixeiraLaryvas([]);lixeira=[];await backupAutomaticoSeNecessario(obras, lixeira);atualizarBotaoLixeira();modal.remove();}catch{alert("Não foi possível esvaziar a lixeira.");}});caixa.appendChild(apagarTudo);}
   modal.appendChild(caixa);document.body.appendChild(modal);
 });
 
@@ -478,8 +642,8 @@ async function salvarObras() {
   try {
     await gravarBancoLaryvas(obras);
     // Backup diário: é criado na primeira alteração feita após completar 24 horas.
-    // O arquivo fica em Downloads e não depende do armazenamento interno do app.
-    await backupAutomaticoSeNecessario();
+    // O destino depende da versão do Android: Downloads (10+) ou pasta privada (6–9).
+    await backupAutomaticoSeNecessario(obras, lixeira);
     return true;
   } catch (erro) {
     console.error("Falha ao salvar a biblioteca:", erro);
@@ -488,11 +652,11 @@ async function salvarObras() {
   }
 }
 
-async function backupAutomaticoSeNecessario() {
+async function backupAutomaticoSeNecessario(obrasLista, lixeiraLista) {
   try {
     if (window.Android && typeof window.Android.shouldCreateAutomaticBackup === "function" &&
         typeof window.Android.saveAutomaticBackup === "function" && window.Android.shouldCreateAutomaticBackup()) {
-      window.Android.saveAutomaticBackup(JSON.stringify(criarConteudoBackup()));
+      window.Android.saveAutomaticBackup(JSON.stringify(criarConteudoBackup(obrasLista, lixeiraLista)));
     }
   } catch (erro) { console.warn("Backup automático não iniciado:", erro); }
 }
@@ -912,10 +1076,11 @@ const resultado = obras.filter(obra => {
     const card = document.createElement("article");
     card.className = "card-obra";
 
-    if (obra.capa) {
+    const capaSegura = urlImagemSegura(obra.capa);
+    if (capaSegura) {
       const capa = document.createElement("img");
       capa.className = "capa-obra";
-      capa.src = obra.capa;
+      capa.src = capaSegura;
       capa.alt = "Capa de " + obra.nome;
       capa.onerror = () => capa.style.display = "none";
       card.appendChild(capa);
@@ -952,12 +1117,15 @@ const resultado = obras.filter(obra => {
         nomeFonte.textContent = fonte.scan || `Scan ${indice + 1}`;
         nomeFonte.style.cssText = "margin:0 0 5px;color:#c9a5ff;font-weight:bold;";
         linha.appendChild(nomeFonte);
-        if (fonte.link) {
+        const destinoSeguro = urlHttpSegura(fonte.link);
+        if (destinoSeguro) {
           const abrir = document.createElement("a");
-          abrir.href = fonte.link; abrir.textContent = "Abrir obra"; abrir.target = "_blank"; abrir.rel = "noopener noreferrer";
+          abrir.href = destinoSeguro; abrir.textContent = "Abrir obra"; abrir.target = "_blank"; abrir.rel = "noopener noreferrer";
           linha.appendChild(abrir);
         } else {
-          const semLink = document.createElement("small"); semLink.textContent = "Link não informado"; linha.appendChild(semLink);
+          const semLink = document.createElement("small");
+          semLink.textContent = fonte.link ? "Link inválido ou não seguro" : "Link não informado";
+          linha.appendChild(semLink);
         }
         listaLinks.appendChild(linha);
       });
@@ -999,9 +1167,10 @@ if (Array.isArray(obra.capitulosFavoritos) && obra.capitulosFavoritos.length) {
   favCaps.style.cssText = "color:#e6a9d5;font-size:11px;";
   card.appendChild(favCaps);
 }
-    if (obra.link) {
+    const linkPrincipalSeguro = urlHttpSegura(obra.link);
+    if (linkPrincipalSeguro) {
       const link = document.createElement("a");
-      link.href = obra.link;
+      link.href = linkPrincipalSeguro;
       link.textContent = "Abrir obra";
       link.target = "_blank";
       link.rel = "noopener noreferrer";
@@ -1076,7 +1245,7 @@ card.appendChild(favorito);
       const obrasAntes = obras; const lixeiraAntes = lixeira;
       obras = obras.filter(item => String(item.id) !== String(obra.id));
       lixeira = [...lixeira, { ...obra, excluidaEm: new Date().toISOString() }];
-      try { await gravarBibliotecaELixeira(obras, lixeira); await backupAutomaticoSeNecessario(); atualizarBotaoLixeira(); mostrarObras(pesquisa.value); }
+      try { await gravarBibliotecaELixeira(obras, lixeira); await backupAutomaticoSeNecessario(obras, lixeira); atualizarBotaoLixeira(); mostrarObras(pesquisa.value); }
       catch { obras = obrasAntes; lixeira = lixeiraAntes; alert("Não foi possível mover a obra para a lixeira."); }
     });
 
@@ -1133,12 +1302,17 @@ infoBackup.insertAdjacentElement("afterend", botaoHistoricoBackups);
 botaoHistoricoBackups.addEventListener("click", () => {
   let lista = [];
   try { lista = window.Android && typeof window.Android.getAutomaticBackups === "function" ? JSON.parse(window.Android.getAutomaticBackups() || "[]") : []; } catch(e) { console.error(e); }
-  const msg = lista.length ? "Backups automáticos encontrados em Downloads:\n\n" + lista.map((v,i)=>`${i+1}. ${v}`).join("\n") + "\n\nPara restaurar: toque em Restaurar biblioteca e escolha um desses arquivos em Downloads." : "Nenhum backup automático foi encontrado. Os próximos backups serão criados após uma alteração quando completar 24 horas.";
+  const localBackup = window.Android && typeof window.Android.getAutomaticBackupLocation === "function"
+    ? window.Android.getAutomaticBackupLocation()
+    : "Downloads (quando disponível)";
+  const msg = lista.length
+    ? `Backups automáticos encontrados em ${localBackup}:\n\n` + lista.map((v,i)=>`${i+1}. ${v}`).join("\n") + `\n\nPara restaurar, toque em Restaurar biblioteca e localize o arquivo no destino indicado.`
+    : "Nenhum backup automático foi encontrado. Os próximos backups serão criados após uma alteração quando completar 24 horas.";
   alert(msg);
 });
 
 botaoBackup.addEventListener("click", async () => {
-  const conteudo = JSON.stringify(criarConteudoBackup(), null, 2);
+  const conteudo = JSON.stringify(criarConteudoBackup(obras, lixeira), null, 2);
 
   // No APK, salva o JSON diretamente na pasta Downloads do Android.
   if (window.Android && typeof window.Android.saveBackup === "function") {
@@ -1214,10 +1388,16 @@ arquivoRestauracao.addEventListener("change", async () => {
   if (!arquivo) return;
   try {
     const dadosOriginais = JSON.parse(await arquivo.text());
-    // Compatibilidade: aceita backups antigos (lista) e o novo formato com biblioteca + lixeira.
-    const listaObrasBackup = Array.isArray(dadosOriginais) ? dadosOriginais : dadosOriginais.obras;
-    const dados = normalizarObrasBackup(listaObrasBackup);
-    const lixeiraBackup = !Array.isArray(dadosOriginais) && Array.isArray(dadosOriginais.lixeira) ? normalizarObrasBackup(dadosOriginais.lixeira) : [];
+    const { biblioteca: dados, lixeira: lixeiraBackup } = lerEstruturaBackupRestauracao(dadosOriginais);
+
+    if (dados.length === 0 && lixeiraBackup.length === 0 && (obras.length > 0 || lixeira.length > 0)) {
+      if (!window.confirm(
+        "ATENÇÃO: este backup está vazio e sua biblioteca atual possui obras. " +
+        "Se continuar, todas as obras atuais serão substituídas por uma biblioteca vazia. " +
+        "Deseja realmente continuar?"
+      )) return;
+    }
+
     if (!window.confirm(`Este backup contém ${dados.length} obra(s) e ${lixeiraBackup.length} item(ns) na lixeira.\n\nA biblioteca atual e a lixeira serão SUBSTITUÍDAS pelo conteúdo do backup. Faça um backup manual da biblioteca atual antes de continuar.\n\nDeseja continuar?`)) return;
     await gravarBibliotecaELixeira(dados, lixeiraBackup);
     obras = dados;
@@ -1257,7 +1437,7 @@ function chaveNomeObra(nome) {
   return String(nome || "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-BR")
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim().replace(/\s+/g, " ");
 }
 
@@ -1274,11 +1454,15 @@ arquivoImportacaoNovas.addEventListener("change", async () => {
   if (!arquivo) return;
   try {
     const conteudo = JSON.parse(await arquivo.text());
-    const listaRecebida = Array.isArray(conteudo) ? conteudo : conteudo && conteudo.obras;
+    if (!Array.isArray(conteudo) && (!conteudo || typeof conteudo !== "object" || (conteudo.formato != null && conteudo.formato !== "LARYVAS_BACKUP"))) {
+      throw new Error("Este arquivo não contém um backup reconhecido pela LARYVAS.");
+    }
+    const listaRecebida = Array.isArray(conteudo) ? conteudo : conteudo.obras;
     if (!Array.isArray(listaRecebida)) {
       throw new Error("Este arquivo não contém uma lista de obras reconhecida pela LARYVAS.");
     }
     const importadas = normalizarObrasBackup(listaRecebida);
+    validarIdsBackup(importadas, []);
     const nomesExistentes = new Set([
       ...obras.map(o => chaveNomeObra(o.nome)),
       ...lixeira.map(o => chaveNomeObra(o.nome))
@@ -1337,7 +1521,50 @@ resumoBackup.textContent = "⇄ Backup, restauração e importação";
 resumoBackup.style.cssText = "color:#c9a5ff;font-weight:bold;cursor:pointer;padding:5px;";
 painelBackup.appendChild(resumoBackup);
 [infoBackup, botaoBackup, botaoHistoricoBackups, botaoRestaurar, botaoImportarNovas].forEach(el => { el.style.marginTop = "12px"; painelBackup.appendChild(el); });
-botaoAdicionar.insertAdjacentElement("afterend", painelBackup);
+
+// Área separada de configurações: mantém a biblioteca limpa e preserva os filtros ao voltar.
+const secaoBiblioteca = document.querySelector(".biblioteca");
+const telaConfiguracoes = document.createElement("section");
+telaConfiguracoes.id = "tela-configuracoes";
+telaConfiguracoes.hidden = true;
+telaConfiguracoes.style.cssText = "padding:4px 0 24px;";
+const voltarBiblioteca = document.createElement("button");
+voltarBiblioteca.type = "button";
+voltarBiblioteca.textContent = "← Voltar para biblioteca";
+voltarBiblioteca.style.cssText = "width:100%;padding:12px;margin-bottom:18px;border:1px solid #65517d;border-radius:10px;background:#292432;color:#c9a5ff;font-weight:bold;";
+const tituloConfiguracoes = document.createElement("h2");
+tituloConfiguracoes.textContent = "Configurações";
+tituloConfiguracoes.style.cssText = "color:#c9a5ff;margin-bottom:6px;";
+const descricaoConfiguracoes = document.createElement("p");
+descricaoConfiguracoes.textContent = "Gerencie sua biblioteca, faça cópias de segurança e organize suas obras.";
+descricaoConfiguracoes.style.cssText = "color:#aaa0b8;font-size:13px;margin-bottom:18px;";
+telaConfiguracoes.append(voltarBiblioteca, tituloConfiguracoes, descricaoConfiguracoes, painelAcoesLote, painelBackup);
+secaoBiblioteca.appendChild(telaConfiguracoes);
+const conteudoBiblioteca = [...secaoBiblioteca.children].filter(el => el !== telaConfiguracoes);
+const displaysBiblioteca = new Map(conteudoBiblioteca.map(el => [el, el.style.display]));
+let rolagemBibliotecaSalva = 0;
+function abrirConfiguracoes() {
+  rolagemBibliotecaSalva = window.scrollY || 0;
+  conteudoBiblioteca.forEach(el => { el.hidden = true; el.style.display = "none"; });
+  telaConfiguracoes.hidden = false;
+  botaoConfiguracoes.hidden = true;
+  botaoConfiguracoes.style.display = "none";
+  window.scrollTo(0, 0);
+}
+function fecharConfiguracoes() {
+  telaConfiguracoes.hidden = true;
+  conteudoBiblioteca.forEach(el => { el.hidden = false; el.style.display = displaysBiblioteca.get(el) || ""; });
+  botaoConfiguracoes.hidden = false;
+  botaoConfiguracoes.style.display = "block";
+  window.scrollTo(0, rolagemBibliotecaSalva);
+}
+const botaoConfiguracoes = document.createElement("button");
+botaoConfiguracoes.type = "button";
+botaoConfiguracoes.textContent = "⚙ Configurações";
+botaoConfiguracoes.style.cssText = "display:block;width:100%;margin-top:12px;padding:12px;border:1px solid #65517d;border-radius:10px;background:#292432;color:#c9a5ff;font-weight:bold;";
+botaoConfiguracoes.addEventListener("click", abrirConfiguracoes);
+voltarBiblioteca.addEventListener("click", fecharConfiguracoes);
+secaoBiblioteca.insertBefore(botaoConfiguracoes, telaConfiguracoes);
 
 mostrarObras();
 

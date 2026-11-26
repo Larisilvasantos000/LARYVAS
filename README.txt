@@ -2,7 +2,7 @@ LARYVAS V3 — PROJETO-FONTE CONSOLIDADO
 
 Leia primeiro: README-V3-CONSOLIDADO.txt
 
-Este pacote contém o projeto Android completo para abrir no GitHub Codespaces/Android Studio e compilar pelo workflow GitHub Actions da branch desenvolvimento-v3.
+Este pacote contém o projeto Android completo para abrir no GitHub Codespaces/Android Studio e compilar pelo workflow GitHub Actions das branches desenvolvimento-v3 ou validacao-v3-integrada (ou execução manual).
 
 IMPORTANTE:
 - Não é um APK instalável.
