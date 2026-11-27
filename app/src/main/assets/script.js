@@ -541,6 +541,10 @@ acoesLote.append(loteStatus, loteCategoria, loteExcluir, abrirLixeira);
 painelAcoesLote.append(linhaSelecao, contadorSelecao, acoesLote);
 listaObras.insertAdjacentElement("beforebegin", painelAcoesLote);
 
+// V3.1.1: manter "Adicionar obra" junto dos filtros, antes da grade.
+// O botão não deve ficar depois das centenas de cards da biblioteca.
+listaObras.insertAdjacentElement("beforebegin", botaoAdicionar);
+
 function atualizarContadorSelecao() { contadorSelecao.textContent = `${obrasSelecionadas.size} obra(s) selecionada(s)`; }
 function urlHttpSegura(valor) {
   const texto = String(valor || "").trim();
