@@ -1,4 +1,4 @@
-name: Build LARYVAS APK
+git hubname: Build LARYVAS APK
 
 on:
   workflow_dispatch:
