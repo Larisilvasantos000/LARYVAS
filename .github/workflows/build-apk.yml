@@ -33,6 +33,12 @@ jobs:
             npx cap add android
           fi
 
+      - name: Gerar ícones nativos do Android a partir de icon.png
+        run: |
+          if [ -f "icon.png" ]; then
+            npx @capacitor/assets generate --android --iconBackgroundColor '#12071f' --iconBackgroundColorDark '#12071f'
+          fi
+
       - name: Sincronizar arquivos web com o projeto Android
         run: npx cap sync android
 
