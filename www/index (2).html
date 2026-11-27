@@ -1,0 +1,3102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LARYVAS — Sua biblioteca pessoal</title>
+  <style>
+    :root {
+      --bg-page: #0f0c18;
+      --bg-card: #1a1528;
+      --bg-card-hover: #231c36;
+      --bg-pill: #1b1629;
+      --bg-input: #120e1d;
+      --border: #2e2645;
+      --purple: #7c3aed;
+      --purple-light: #9333ea;
+      --purple-glow: rgba(124, 58, 237, 0.35);
+      --text-main: #f4f1fa;
+      --text-muted: #988eb0;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --violet-num: #a855f7;
+      --danger: #ef4444;
+      --colunas-obras: 3;
+    }
+
+    body.theme-light {
+      --bg-page: #f5f3fa;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f0ebf9;
+      --bg-pill: #efeaf8;
+      --bg-input: #f7f5fc;
+      --border: #ddd4ef;
+      --text-main: #1b1529;
+      --text-muted: #5d5375;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 104px;
+      overflow-x: hidden;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* Topo */
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar-brand {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+      min-width: 0;
+    }
+
+    .topbar-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-subtitle {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 7px 11px;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--purple);
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 14px 14px 24px;
+    }
+
+    /* Aviso discreto de backup */
+    .backup-banner {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--amber);
+      border-radius: 12px;
+      padding: 9px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .backup-banner.ok {
+      border-left-color: var(--green);
+    }
+
+    .backup-banner-btn {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* 4 Cards de estatísticas */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .stat-card:hover,
+    .stat-card.active {
+      border-color: var(--purple);
+      transform: translateY(-1px);
+    }
+
+    .stat-num {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    .stat-total { color: var(--text-main); }
+    .stat-lendo { color: var(--violet-num); }
+    .stat-concluidas { color: var(--green); }
+    .stat-favoritas { color: var(--amber); }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Barra de busca */
+    .search-box {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px 12px 42px;
+      color: var(--text-main);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-box input:focus {
+      border-color: var(--purple);
+    }
+
+    /* Linha de Categorias */
+    .cat-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .cat-scroll {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      flex: 1;
+      scrollbar-width: none;
+      padding: 2px 0;
+    }
+
+    .cat-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-pill {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .cat-pill .badge {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 999px;
+    }
+
+    .cat-pill.active {
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 14px var(--purple-glow);
+    }
+
+    .cat-pill.active .badge {
+      background: rgba(255, 255, 255, 0.22);
+      color: #fff;
+    }
+
+    .btn-add-cat {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-add-cat:hover {
+      border-color: var(--purple);
+    }
+
+    .swipe-hint {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 6px;
+      margin-bottom: 10px;
+    }
+
+    /* Pílulas de Status */
+    .status-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin-bottom: 12px;
+      padding-bottom: 2px;
+    }
+
+    .status-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .status-pill {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .status-pill.active {
+      background: var(--bg-card-hover);
+      border-color: var(--purple);
+      color: var(--text-main);
+      box-shadow: 0 0 0 1px var(--purple-glow);
+    }
+
+    /* Ordenar e Limpar filtros */
+    .sort-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .sort-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .btn-clear-filters {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+    }
+
+    .btn-clear-filters.visible {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sort-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Empty State */
+    .empty-state {
+      border: 1.5px dashed var(--border);
+      border-radius: 22px;
+      padding: 46px 20px;
+      text-align: center;
+      background: var(--bg-card);
+      margin-top: 4px;
+    }
+
+    .empty-icon-box {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 18px;
+      border-radius: 16px;
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 30px;
+    }
+
+    .empty-text {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .empty-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 11px 18px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 18px var(--purple-glow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-pill);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .btn-danger-outline {
+      background: rgba(239, 68, 68, 0.12);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    body.theme-light .btn-danger-outline {
+      color: #b91c1c;
+    }
+
+    /* Grade de Obras */
+    .obras-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--colunas-obras, 3), minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .obra-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .obra-card.selected {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 2px var(--purple-glow);
+    }
+
+    .obra-select-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 4;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--purple);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      display: none;
+      place-items: center;
+    }
+
+    .selection-mode .obra-select-badge {
+      display: grid;
+    }
+
+    .selection-mode .obra-status-tag {
+      left: 38px;
+    }
+
+    .obra-cover-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      background: var(--bg-pill);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .obra-cover-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .obra-cover-placeholder {
+      font-size: 32px;
+      opacity: 0.7;
+    }
+
+    .obra-status-tag {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(15, 12, 24, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #f4f1fa;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 999px;
+      max-width: 72%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .obra-fav-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(15, 12, 24, 0.85);
+      color: var(--amber);
+      font-size: 13px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .obra-body {
+      padding: 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .obra-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .obra-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .obra-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .btn-plus-cap {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 7px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .btn-plus-cap:hover {
+      border-color: var(--purple);
+      background: var(--bg-card-hover);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 5px;
+      background: var(--bg-pill);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--purple), var(--purple-light));
+    }
+
+    .obra-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .obra-tag {
+      font-size: 10px;
+      background: var(--bg-pill);
+      color: var(--text-muted);
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    .obra-actions {
+      display: flex;
+      gap: 4px;
+      margin-top: auto;
+      padding-top: 5px;
+    }
+
+    .obra-actions button,
+    .obra-actions a {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-pill);
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .obra-actions .btn-del {
+      color: #fca5a5;
+    }
+
+    body.theme-light .obra-actions .btn-del {
+      color: #b91c1c;
+    }
+
+    /* Barra inferior de seleção em massa */
+    .bulk-bar {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--purple);
+      border-radius: 16px;
+      padding: 10px 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 80;
+    }
+
+    .bulk-bar.active {
+      display: flex;
+    }
+
+    .bulk-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+
+    .bulk-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .bulk-actions button {
+      flex: 1;
+      min-width: 80px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-pill);
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .bulk-actions .btn-bulk-del {
+      background: rgba(239, 68, 68, 0.16);
+      border-color: rgba(239, 68, 68, 0.45);
+      color: #fca5a5;
+    }
+
+    body.theme-light .bulk-actions .btn-bulk-del {
+      color: #b91c1c;
+    }
+
+    /* Botão flutuante inferior direito */
+    .fab-add {
+      position: fixed;
+      right: 16px;
+      bottom: 24px;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 13px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 8px 24px var(--purple-glow);
+      cursor: pointer;
+      z-index: 45;
+    }
+
+    .fab-add.hidden-fab {
+      display: none;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 28px;
+    }
+
+    /* Modais */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 5, 14, 0.84);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .modal-card h2 {
+      font-size: 17px;
+      margin-bottom: 14px;
+      color: var(--text-main);
+    }
+
+    .modal-card h3 {
+      font-size: 13.5px;
+      margin: 14px 0 8px;
+      color: var(--text-main);
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-size: 13.5px;
+      outline: none;
+    }
+
+    .field textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .cover-preview-box {
+      width: 96px;
+      height: 128px;
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+      background: var(--bg-input);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .cover-preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .scan-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .scan-row {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .btn-small {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .cat-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .cat-check-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      color: var(--text-main);
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .modal-footer button {
+      flex: 1;
+    }
+
+    .settings-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .settings-tab {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .settings-tab.active {
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .settings-panel {
+      display: none;
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    .theme-mode-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .palette-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 9px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .palette-btn.active {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 1px var(--purple);
+    }
+
+    .swatch-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .backup-list,
+    .trash-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .backup-item,
+    .trash-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .backup-item strong,
+    .trash-item strong {
+      font-size: 13.5px;
+      color: var(--text-main);
+    }
+
+    .backup-item span,
+    .trash-item span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .trash-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .trash-actions button {
+      flex: 1;
+    }
+
+    .detail-header {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .detail-cover {
+      width: 86px;
+      height: 116px;
+      border-radius: 12px;
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+    }
+
+    .detail-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .cap-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cap-stepper button {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-pill);
+      color: var(--text-main);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .scan-links-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .scan-link-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12.5px;
+    }
+
+    .scan-link-item a {
+      color: var(--purple);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 84px;
+      transform: translateX(-50%);
+      background: var(--bg-card);
+      border: 1px solid var(--purple);
+      color: var(--text-main);
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      max-width: 90vw;
+      text-align: center;
+    }
+    .browser-choice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .browser-choice-btn {
+      width: 100%;
+      text-align: left;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .browser-choice-btn:hover {
+      border-color: var(--purple);
+      background: var(--bg-card-hover);
+    }
+
+    .browser-choice-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 65%;
+    }
+
+      .continue-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 11px 13px;
+      margin-bottom: 12px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .continue-card.visible {
+      display: flex;
+    }
+
+    .continue-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .continue-kicker {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--purple);
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .continue-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .continue-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .continue-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .cat-manage-actions {
+      display: inline-flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .cat-mini-btn {
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 9px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .cat-mini-btn:hover:not(:disabled) {
+      color: var(--text-main);
+      border-color: var(--purple);
+    }
+
+    .cat-mini-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .obra-remain {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-title">LARYVAS</div>
+      <div class="topbar-subtitle">Sua biblioteca pessoal</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="btn-open-settings" title="Configurações">⚙️ Configurações</button>
+    </div>
+  </header>
+
+  <main class="container" id="swipe-area">
+    <!-- Aviso discreto de backup -->
+    <div class="backup-banner" id="backup-banner">
+      <span id="backup-banner-text">Último backup: nunca realizado</span>
+      <button type="button" class="backup-banner-btn" id="btn-quick-backup">Baixar JSON</button>
+    </div>
+
+    <!-- Atalho rápido para última obra aberta / capítulo lido -->
+    <section class="continue-card" id="continue-card">
+      <div class="continue-info">
+        <div class="continue-kicker">Continuar de onde parou</div>
+        <div class="continue-title" id="continue-title">—</div>
+        <div class="continue-sub" id="continue-sub">—</div>
+      </div>
+      <div class="continue-actions">
+        <button type="button" class="btn-secondary" id="btn-continue-open" style="padding:8px 11px;font-size:12px;">Detalhes</button>
+        <button type="button" class="btn-primary" id="btn-continue-read" style="padding:8px 12px;font-size:12px;">Ler</button>
+      </div>
+    </section>
+
+    <!-- Estatísticas -->
+    <section class="stats-grid">
+      <div class="stat-card active" data-stat="Todos">
+        <div class="stat-num stat-total" id="count-total">0</div>
+        <div class="stat-label">Total de obras</div>
+      </div>
+      <div class="stat-card" data-stat="Lendo">
+        <div class="stat-num stat-lendo" id="count-lendo">0</div>
+        <div class="stat-label">Lendo</div>
+      </div>
+      <div class="stat-card" data-stat="Concluída">
+        <div class="stat-num stat-concluidas" id="count-concluidas">0</div>
+        <div class="stat-label">Concluídas</div>
+      </div>
+      <div class="stat-card" data-stat="Favoritas">
+        <div class="stat-num stat-favoritas" id="count-favoritas">0</div>
+        <div class="stat-label">Favoritas</div>
+      </div>
+    </section>
+
+    <!-- Busca -->
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="search" id="search-input" placeholder="Pesquisar obras por título ou scan..." autocomplete="off" />
+    </div>
+
+    <!-- Categorias -->
+    <div class="cat-row">
+      <div class="cat-scroll" id="cat-pills"></div>
+      <button class="btn-add-cat" id="btn-new-cat">+ Categoria</button>
+    </div>
+
+    <div class="cat-manage-actions" id="cat-manage-actions">
+      <button type="button" class="cat-mini-btn" id="btn-rename-cat" disabled>✏️ Renomear categoria</button>
+      <button type="button" class="cat-mini-btn" id="btn-delete-cat" disabled>🗑️ Excluir categoria</button>
+    </div>
+
+    <div class="swipe-hint">
+      <span>Arraste a tela para os lados para mudar de categoria</span>
+      <span id="active-cat-label">Todas</span>
+    </div>
+
+    <!-- Status -->
+    <div class="status-scroll" id="status-pills">
+      <button class="status-pill active" data-status="Todos">Todas</button>
+      <button class="status-pill" data-status="Lendo">Lendo</button>
+      <button class="status-pill" data-status="Quero ler">Quero ler</button>
+      <button class="status-pill" data-status="Concluída">Concluída</button>
+      <button class="status-pill" data-status="Em espera">Em espera</button>
+      <button class="status-pill" data-status="Dropada">Dropada</button>
+    </div>
+
+    <!-- Ordenar e Limpar filtros -->
+    <div class="sort-bar">
+      <button type="button" class="btn-clear-filters" id="btn-clear-filters">✕ Limpar filtros</button>
+      <div class="sort-right">
+        <label for="sort-select">Ordenar:</label>
+        <select id="scan-filter-select" class="sort-select" title="Filtrar por scan">
+          <option value="Todas">Todas as scans</option>
+        </select>
+
+        <select id="sort-select" class="sort-select">
+          <option value="recentes">Recentes</option>
+          <option value="az">Nome A–Z</option>
+          <option value="za">Nome Z–A</option>
+          <option value="capitulos">Mais capítulos</option>
+          <option value="perto-fim">Perto de terminar</option>
+          <option value="favoritas">Favoritas</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Lista ou Empty State -->
+    <div id="library-content"></div>
+
+    <p class="footer-note">LARYVAS © 2026 • Sua biblioteca pessoal</p>
+  </main>
+
+  <!-- Barra de seleção múltipla -->
+  <div class="bulk-bar" id="bulk-bar">
+    <div class="bulk-top">
+      <span id="bulk-count">0 selecionada(s)</span>
+      <div style="display:flex;gap:6px;">
+        <button type="button" class="btn-small" id="btn-bulk-select-all">Selecionar todas</button>
+        <button type="button" class="btn-small" id="btn-bulk-cancel">Cancelar</button>
+      </div>
+    </div>
+    <div class="bulk-actions">
+      <button type="button" id="btn-bulk-status">Alterar Status</button>
+      <button type="button" id="btn-bulk-cats">Alterar Categorias</button>
+      <button type="button" class="btn-bulk-del" id="btn-bulk-delete">Excluir</button>
+    </div>
+  </div>
+
+  <button class="fab-add" id="fab-add">+ Adicionar obra</button>
+
+  <!-- Modal Adicionar/Editar Obra -->
+  <div class="modal-backdrop" id="modal-obra">
+    <div class="modal-card">
+      <h2 id="modal-obra-title">Adicionar nova obra</h2>
+      <form id="form-obra">
+        <input type="hidden" id="obra-id" />
+
+        <!-- Capa da galeria acima de Nome da obra -->
+        <div class="field">
+          <label>Capa da galeria</label>
+          <div class="cover-preview-box" id="obra-capa-preview">
+            <span style="font-size:28px;opacity:0.65;">📖</span>
+          </div>
+          <input type="file" id="obra-capa-file" accept="image/*" />
+        </div>
+
+        <div class="field">
+          <label>Nome da obra *</label>
+          <input type="text" id="obra-nome" required placeholder="Ex.: Solo Leveling" />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Capítulo lido</label>
+            <input type="number" id="obra-cap-lido" min="0" placeholder="0" />
+          </div>
+          <div class="field">
+            <label>Total de capítulos</label>
+            <input type="number" id="obra-cap-total" min="0" placeholder="0" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Status</label>
+          <select id="obra-status">
+            <option value="Quero ler">Quero ler</option>
+            <option value="Lendo">Lendo</option>
+            <option value="Concluída">Concluída</option>
+            <option value="Em espera">Em espera</option>
+            <option value="Dropada">Dropada</option>
+          </select>
+        </div>
+
+        <!-- 2 ou mais links de scans -->
+        <div class="field">
+          <label>Scans e links (adicione 2 ou mais)</label>
+          <div class="scan-rows" id="scan-rows"></div>
+          <button type="button" class="btn-small" id="btn-add-scan-row">+ Adicionar outra scan</button>
+        </div>
+
+        <div class="field">
+          <label>Categorias</label>
+          <div class="cat-checks" id="obra-cat-checks"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btn-cancel-obra">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar obra</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Detalhes da Obra -->
+  <div class="modal-backdrop" id="modal-detail">
+    <div class="modal-card">
+      <div class="detail-header">
+        <div class="detail-cover" id="detail-cover">📖</div>
+        <div style="flex:1;min-width:0;">
+          <h2 id="detail-title" style="margin-bottom:6px;">Título</h2>
+          <div id="detail-badges" style="font-size:12px;color:var(--text-muted);"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Quantidade de capítulos lidos</label>
+        <div class="cap-stepper">
+          <button type="button" id="detail-cap-minus">−</button>
+          <input type="number" id="detail-cap-lido" min="0" style="text-align:center;" />
+          <button type="button" id="detail-cap-plus">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Total de capítulos da obra</label>
+        <input type="number" id="detail-cap-total" min="0" placeholder="0" />
+      </div>
+
+      <div class="field">
+        <label>Capítulos favoritos</label>
+        <input type="text" id="detail-fav-caps" placeholder="Ex.: Cap. 12, 45, 110 — luta final" />
+      </div>
+
+      <div class="field">
+        <label>Comentários sobre a obra</label>
+        <textarea id="detail-comments" placeholder="Escreva suas anotações, opiniões ou pontos marcantes..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Links de scans</label>
+        <div class="scan-links-list" id="detail-scans-list"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btn-detail-edit-full">Editar obra</button>
+        <button type="button" class="btn-primary" id="btn-detail-save">Salvar alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configurações (Aparência, Backup e Lixeira) -->
+  <div class="modal-backdrop" id="modal-settings">
+    <div class="modal-card">
+      <h2>Configurações</h2>
+
+      <div class="settings-tabs">
+        <button type="button" class="settings-tab active" data-tab="aparencia">Aparência</button>
+        <button type="button" class="settings-tab" data-tab="backup">Backup JSON</button>
+        <button type="button" class="settings-tab" data-tab="lixeira">Lixeira (30d)</button>
+      </div>
+
+      <!-- Aba Aparência -->
+      <div class="settings-panel active" id="panel-aparencia">
+        <div class="field">
+          <label>Tema do aplicativo</label>
+          <div class="theme-mode-row">
+            <button type="button" class="btn-secondary" id="btn-theme-dark">🌙 Tema Escuro</button>
+            <button type="button" class="btn-secondary" id="btn-theme-light">☀️ Tema Claro</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Cor de destaque</label>
+          <div class="palette-grid" id="palette-grid">
+            <button type="button" class="palette-btn active" data-accent="roxo"><span class="swatch-dot" style="background:#7c3aed;"></span>Roxo</button>
+            <button type="button" class="palette-btn" data-accent="verde"><span class="swatch-dot" style="background:#10b981;"></span>Verde</button>
+            <button type="button" class="palette-btn" data-accent="azul"><span class="swatch-dot" style="background:#2563eb;"></span>Azul</button>
+            <button type="button" class="palette-btn" data-accent="rosa"><span class="swatch-dot" style="background:#db2777;"></span>Rosa</button>
+            <button type="button" class="palette-btn" data-accent="laranja"><span class="swatch-dot" style="background:#ea580c;"></span>Laranja</button>
+            <button type="button" class="palette-btn" data-accent="vermelho"><span class="swatch-dot" style="background:#dc2626;"></span>Vermelho</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="setting-cols">Quantidade de colunas da grade (padrão: 3)</label>
+          <select id="setting-cols">
+            <option value="2">2 colunas</option>
+            <option value="3" selected>3 colunas (Padrão)</option>
+            <option value="4">4 colunas</option>
+            <option value="5">5 colunas</option>
+            <option value="6">6 colunas</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="setting-browser-choice">Ao clicar em "Ler", perguntar qual navegador usar</label>
+          <select id="setting-browser-choice">
+            <option value="ask" selected>Sempre perguntar / escolher scan e navegador</option>
+            <option value="direct">Abrir direto na aba atual do navegador</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="setting-reminder-days">Lembrete de backup a cada (dias)</label>
+          <select id="setting-reminder-days">
+            <option value="3">3 dias</option>
+            <option value="7" selected>7 dias</option>
+            <option value="14">14 dias</option>
+            <option value="30">30 dias</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Aba Backup JSON -->
+      <div class="settings-panel" id="panel-backup">
+        <div class="backup-list">
+          <div class="backup-item">
+            <strong>⬇️ Baixar Backup JSON Completo</strong>
+            <span>Salva todas as suas obras, categorias e lixeira em um arquivo JSON.</span>
+            <button type="button" class="btn-primary" id="btn-export-json">Baixar backup completo</button>
+          </div>
+
+          <div class="backup-item">
+            <strong>📤 Exportação Parcial (Categoria ou Status)</strong>
+            <span>Exporte apenas obras de uma categoria ou de um status específico.</span>
+            <div class="field-row" style="margin-top:4px;">
+              <select id="partial-export-type">
+                <option value="categoria">Por Categoria</option>
+                <option value="status">Por Status</option>
+              </select>
+              <select id="partial-export-value"></select>
+            </div>
+            <button type="button" class="btn-secondary" id="btn-export-partial">Exportar seleção em JSON</button>
+          </div>
+
+          <div class="backup-item">
+            <strong>↥ Restaurar Backup JSON (Substituir)</strong>
+            <span>Substitui a biblioteca atual pelo conteúdo do arquivo JSON escolhido.</span>
+            <button type="button" class="btn-secondary" id="btn-restore-replace">Escolher JSON para substituir</button>
+          </div>
+
+          <div class="backup-item">
+            <strong>⇄ Mesclar Backup (Atualizar + Adicionar)</strong>
+            <span>Atualiza obras existentes (progresso, scans, categorias, capa) e adiciona as novas sem apagar nada.</span>
+            <button type="button" class="btn-secondary" id="btn-restore-merge">Escolher JSON para mesclar</button>
+          </div>
+
+          <div class="backup-item">
+            <strong>＋ Importar Apenas Obras Novas</strong>
+            <span>Adiciona somente obras que ainda não existem na sua biblioteca.</span>
+            <button type="button" class="btn-secondary" id="btn-restore-new">Escolher JSON (somente novas)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aba Lixeira (30 dias) -->
+      <div class="settings-panel" id="panel-lixeira">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;">
+          <span style="font-size:12px;color:var(--text-muted);">Itens ficam na lixeira por 30 dias antes da exclusão automática.</span>
+          <button type="button" class="btn-danger-outline" id="btn-empty-trash">Esvaziar</button>
+        </div>
+        <div class="trash-list" id="trash-list"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btn-close-settings">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ações em Massa -->
+  <div class="modal-backdrop" id="modal-bulk">
+    <div class="modal-card">
+      <h2 id="modal-bulk-title">Ação em massa</h2>
+      <div id="bulk-status-box" class="field" style="display:none;">
+        <label>Novo status para as obras selecionadas</label>
+        <select id="bulk-status-select">
+          <option value="Quero ler">Quero ler</option>
+          <option value="Lendo">Lendo</option>
+          <option value="Concluída">Concluída</option>
+          <option value="Em espera">Em espera</option>
+          <option value="Dropada">Dropada</option>
+        </select>
+      </div>
+      <div id="bulk-cats-box" class="field" style="display:none;">
+        <label>Adicionar categorias às obras selecionadas</label>
+        <div class="cat-checks" id="bulk-cat-checks"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btn-cancel-bulk">Cancelar</button>
+        <button type="button" class="btn-primary" id="btn-apply-bulk">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="hidden-json-input" accept=".json,application/json" style="display:none" />
+  <!-- Modal Escolher Navegador / Scan ao Ler -->
+  <div class="modal-backdrop" id="modal-read-choice">
+    <div class="modal-card">
+      <h2 id="read-choice-title">Abrir obra para leitura</h2>
+      <p id="read-choice-subtitle" style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;"></p>
+
+      <div class="field" style="margin-bottom:10px;">
+        <label style="margin-bottom:6px;">Escolha a scan e como deseja abrir</label>
+        <div class="browser-choice-list" id="read-scan-options"></div>
+      </div>
+
+      <div class="field" style="margin-bottom:10px;">
+        <label style="margin-bottom:6px;">Dica para abrir em outro navegador no celular/PC</label>
+        <div class="browser-choice-list" id="read-browser-helpers"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btn-cancel-read-choice">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DB_NAME = "LARYVAS_DB";
+    const DB_VERSION = 1;
+    const TRASH_MAX_DAYS = 30;
+    const MS_PER_DAY = 86400000;
+
+    const ACCENTS = {
+      roxo:     { main: "#7c3aed", light: "#9333ea", glow: "rgba(124, 58, 237, 0.35)" },
+      verde:    { main: "#10b981", light: "#059669", glow: "rgba(16, 185, 129, 0.35)" },
+      azul:     { main: "#2563eb", light: "#3b82f6", glow: "rgba(37, 99, 235, 0.35)" },
+      rosa:     { main: "#db2777", light: "#ec4899", glow: "rgba(219, 39, 119, 0.35)" },
+      laranja:  { main: "#ea580c", light: "#f97316", glow: "rgba(234, 88, 12, 0.35)" },
+      vermelho: { main: "#dc2626", light: "#ef4444", glow: "rgba(220, 38, 38, 0.35)" }
+    };
+
+    let db = null;
+    let obras = [];
+    let lixeira = [];
+    let categoriasCustom = [];
+    let prefs = {
+      theme: "dark",
+      accent: "roxo",
+      columns: 3,
+      reminderDays: 7,
+      lastBackupAt: null,
+      readActionMode: "ask",
+      lastOpenedId: null
+    };
+
+    let activeCategory = "Todas";
+    let activeStatus = "Todos";
+    let activeScan = "Todas";
+    let searchTerm = "";
+    let sortMode = "recentes";
+    let jsonImportMode = "replace";
+
+    let selectionMode = false;
+    let selectedIds = new Set();
+    let bulkActionMode = "status";
+    let currentDetailId = null;
+    let tempCoverData = "";
+    let handlingPopState = false;
+
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.style.display = "none"; }, 3000);
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const d = req.result;
+          if (!d.objectStoreNames.contains("dados")) {
+            d.createObjectStore("dados", { keyPath: "id" });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function readStore(key, fallback) {
+      return new Promise((resolve) => {
+        if (!db) return resolve(fallback);
+        const tx = db.transaction("dados", "readonly");
+        const req = tx.objectStore("dados").get(key);
+        req.onsuccess = () => resolve(req.result ? req.result.value : fallback);
+        req.onerror = () => resolve(fallback);
+      });
+    }
+
+    function writeStore(key, value) {
+      return new Promise((resolve, reject) => {
+        if (!db) return resolve();
+        const tx = db.transaction("dados", "readwrite");
+        tx.objectStore("dados").put({ id: key, value, updatedAt: new Date().toISOString() });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function persistAll() {
+      await writeStore("biblioteca_v1", obras);
+      await writeStore("lixeira_v1", lixeira);
+      await writeStore("categorias_v1", categoriasCustom);
+      await writeStore("prefs_v1", prefs);
+    }
+
+    function purgeExpiredTrash() {
+      const now = Date.now();
+      const before = lixeira.length;
+      lixeira = lixeira.filter(item => {
+        const deletedMs = Date.parse(item.excluidaEm || "");
+        if (!deletedMs) return true;
+        return (now - deletedMs) < TRASH_MAX_DAYS * MS_PER_DAY;
+      });
+      return before - lixeira.length;
+    }
+
+    function daysLeftInTrash(item) {
+      const deletedMs = Date.parse(item.excluidaEm || "");
+      if (!deletedMs) return TRASH_MAX_DAYS;
+      const elapsedDays = Math.floor((Date.now() - deletedMs) / MS_PER_DAY);
+      return Math.max(0, TRASH_MAX_DAYS - elapsedDays);
+    }
+
+    function applyPrefs() {
+      document.body.classList.toggle("theme-light", prefs.theme === "light");
+      const pal = ACCENTS[prefs.accent] || ACCENTS.roxo;
+      document.documentElement.style.setProperty("--purple", pal.main);
+      document.documentElement.style.setProperty("--purple-light", pal.light);
+      document.documentElement.style.setProperty("--purple-glow", pal.glow);
+
+      const cols = Math.min(6, Math.max(2, Number(prefs.columns) || 3));
+      document.documentElement.style.setProperty("--colunas-obras", String(cols));
+      document.getElementById("setting-cols").value = String(cols);
+      document.getElementById("setting-reminder-days").value = String(prefs.reminderDays || 7);
+      const readModeEl = document.getElementById("setting-browser-choice");
+      if (readModeEl) readModeEl.value = prefs.readActionMode || "ask";
+
+      document.querySelectorAll(".palette-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.accent === prefs.accent);
+      });
+
+      renderBackupBanner();
+    }
+
+    function renderBackupBanner() {
+      const banner = document.getElementById("backup-banner");
+      const textEl = document.getElementById("backup-banner-text");
+      if (!prefs.lastBackupAt) {
+        banner.classList.remove("ok");
+        textEl.textContent = "Backup JSON ainda não realizado neste dispositivo";
+        return;
+      }
+      const daysAgo = Math.max(0, Math.floor((Date.now() - Date.parse(prefs.lastBackupAt)) / MS_PER_DAY));
+      const limit = Number(prefs.reminderDays) || 7;
+      if (daysAgo >= limit) {
+        banner.classList.remove("ok");
+        textEl.textContent = `Último backup há ${daysAgo} dia(s) — vale exportar um JSON`;
+      } else {
+        banner.classList.add("ok");
+        textEl.textContent = daysAgo === 0 ? "Backup em dia (hoje)" : `Backup em dia (há ${daysAgo} dia(s))`;
+      }
+    }
+
+    function normalizeKey(str) {
+      return String(str || "")
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    }
+
+    function allCategories() {
+      const set = new Set(categoriasCustom);
+      obras.forEach(o => (o.categorias || []).forEach(c => set.add(c)));
+      return ["Todas", ...Array.from(set)];
+    }
+
+    function pushHistoryState(tag) {
+      if (handlingPopState) return;
+      try {
+        history.pushState({ laryvasView: tag }, "");
+      } catch (_) {}
+    }
+
+    function closeAllModals() {
+      document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
+    }
+
+    window.addEventListener("popstate", () => {
+      handlingPopState = true;
+      const openModal = document.querySelector(".modal-backdrop.open");
+      if (openModal) {
+        openModal.classList.remove("open");
+        handlingPopState = false;
+        return;
+      }
+      if (selectionMode) {
+        exitSelectionMode();
+        handlingPopState = false;
+        return;
+      }
+      if (activeStatus !== "Todos") {
+        activeStatus = "Todos";
+        render();
+        handlingPopState = false;
+        return;
+      }
+      if (activeCategory !== "Todas") {
+        activeCategory = "Todas";
+        render();
+        handlingPopState = false;
+        return;
+      }
+      handlingPopState = false;
+    });
+
+    function renderStats() {
+      document.getElementById("count-total").textContent = obras.length;
+      document.getElementById("count-lendo").textContent = obras.filter(o => o.status === "Lendo").length;
+      document.getElementById("count-concluidas").textContent = obras.filter(o => o.status === "Concluída").length;
+      document.getElementById("count-favoritas").textContent = obras.filter(o => o.favorita).length;
+
+      document.querySelectorAll(".stat-card").forEach(card => {
+        card.classList.toggle("active", card.dataset.stat === activeStatus);
+      });
+    }
+
+    function renderCategories() {
+      const container = document.getElementById("cat-pills");
+      const cats = allCategories();
+      if (!cats.includes(activeCategory)) activeCategory = "Todas";
+      document.getElementById("active-cat-label").textContent = activeCategory;
+
+      container.innerHTML = "";
+      cats.forEach(cat => {
+        const count = cat === "Todas"
+          ? obras.length
+          : obras.filter(o => (o.categorias || []).includes(cat)).length;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cat-pill" + (cat === activeCategory ? " active" : "");
+        btn.innerHTML = `<span>${cat}</span><span class="badge">${count}</span>`;
+        btn.addEventListener("click", () => {
+          activeCategory = cat;
+          pushHistoryState("cat:" + cat);
+          render();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function renderStatusPills() {
+      document.querySelectorAll(".status-pill").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.status === activeStatus);
+      });
+    }
+
+    function updateClearFiltersBtn() {
+      const hasFilter = activeCategory !== "Todas" || activeStatus !== "Todos" || activeScan !== "Todas" || Boolean(searchTerm.trim());
+      document.getElementById("btn-clear-filters").classList.toggle("visible", hasFilter);
+    }
+
+    function allScans() {
+      const set = new Set();
+      obras.forEach(o => {
+        if (o.scan && String(o.scan).trim()) set.add(String(o.scan).trim());
+        (o.scans || []).forEach(s => {
+          if (s && s.scan && String(s.scan).trim()) set.add(String(s.scan).trim());
+        });
+      });
+      return ["Todas", ...Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"))];
+    }
+
+    function renderScanFilter() {
+      const sel = document.getElementById("scan-filter-select");
+      if (!sel) return;
+      const scans = allScans();
+      if (!scans.includes(activeScan)) activeScan = "Todas";
+      sel.innerHTML = scans.map(sc =>
+        `<option value="${sc.replace(/"/g, "&quot;")}" ${sc === activeScan ? "selected" : ""}>${sc === "Todas" ? "Todas as scans" : sc}</option>`
+      ).join("");
+    }
+
+    function renderCategoryButtonsState() {
+      const renameBtn = document.getElementById("btn-rename-cat");
+      const delBtn = document.getElementById("btn-delete-cat");
+      const isCustomSelected = activeCategory !== "Todas";
+      if (renameBtn) renameBtn.disabled = !isCustomSelected;
+      if (delBtn) delBtn.disabled = !isCustomSelected;
+    }
+
+    function renderContinueCard() {
+      const card = document.getElementById("continue-card");
+      if (!card) return;
+      let target = prefs.lastOpenedId
+        ? obras.find(o => String(o.id) === String(prefs.lastOpenedId))
+        : null;
+      if (!target && obras.length) {
+        const sortedByRecent = [...obras].sort((a, b) =>
+          String(b.atualizadoEm || "").localeCompare(String(a.atualizadoEm || ""))
+        );
+        target = sortedByRecent[0];
+      }
+      if (!target) {
+        card.classList.remove("visible");
+        return;
+      }
+      const lido = Number(target.capituloLido) || 0;
+      const total = Number(target.totalCapitulos) || 0;
+      const pct = total > 0 ? Math.min(100, Math.round((lido / total) * 100)) : null;
+      const rest = total > 0 ? Math.max(0, total - lido) : null;
+
+      card.classList.add("visible");
+      document.getElementById("continue-title").textContent = target.nome;
+      document.getElementById("continue-sub").textContent =
+        `Cap. ${lido}${total > 0 ? `/${total}` : ""}` +
+        (pct !== null ? ` (${pct}% • faltam ${rest})` : "") +
+        (target.scan ? ` • ${target.scan}` : "");
+
+      document.getElementById("btn-continue-open").onclick = () => openDetailModal(target.id);
+      document.getElementById("btn-continue-read").onclick = () => {
+        markLastOpened(target.id);
+        openReadChooser(target);
+      };
+    }
+
+    async function markLastOpened(id) {
+      prefs.lastOpenedId = id;
+      await writeStore("prefs_v1", prefs);
+      renderContinueCard();
+    }
+
+    function getFilteredObras() {
+      const q = normalizeKey(searchTerm);
+      let list = obras.filter(o => {
+        const matchCat = activeCategory === "Todas" || (o.categorias || []).includes(activeCategory);
+        const matchStatus =
+          activeStatus === "Todos" ||
+          (activeStatus === "Favoritas" ? !!o.favorita : o.status === activeStatus);
+        const obraScans = [
+          ...(o.scan ? [String(o.scan).trim()] : []),
+          ...((o.scans || []).map(s => (s && s.scan ? String(s.scan).trim() : "")).filter(Boolean))
+        ];
+        const matchScan = activeScan === "Todas" || obraScans.includes(activeScan);
+        const scansText = obraScans.join(" ");
+        const matchQuery = !q ||
+          normalizeKey(o.nome).includes(q) ||
+          normalizeKey(o.scan).includes(q) ||
+          normalizeKey(scansText).includes(q);
+        return matchCat && matchStatus && matchScan && matchQuery;
+      });
+
+      if (sortMode === "az") list.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+      else if (sortMode === "za") list.sort((a, b) => b.nome.localeCompare(a.nome, "pt-BR"));
+      else if (sortMode === "capitulos") list.sort((a, b) => (b.capituloLido || 0) - (a.capituloLido || 0));
+      else if (sortMode === "favoritas") list.sort((a, b) => Number(!!b.favorita) - Number(!!a.favorita));
+      else if (sortMode === "perto-fim") {
+        list.sort((a, b) => {
+          const remA = (a.totalCapitulos > 0 && a.capituloLido < a.totalCapitulos)
+            ? (a.totalCapitulos - a.capituloLido)
+            : Number.POSITIVE_INFINITY;
+          const remB = (b.totalCapitulos > 0 && b.capituloLido < b.totalCapitulos)
+            ? (b.totalCapitulos - b.capituloLido)
+            : Number.POSITIVE_INFINITY;
+          return remA - remB;
+        });
+      }
+      else list.sort((a, b) => String(b.atualizadoEm || "").localeCompare(String(a.atualizadoEm || "")));
+
+      return list;
+    }
+
+    function syncCardSelectionUI(id) {
+      const key = String(id);
+      const card = document.querySelector(`.obra-card[data-obra-id="${key}"]`);
+      if (!card) return false;
+      const isSelected = selectedIds.has(key);
+      card.classList.toggle("selected", isSelected);
+      const badge = card.querySelector(".obra-select-badge");
+      if (badge) badge.textContent = isSelected ? "✓" : "";
+      return true;
+    }
+
+    function enterSelectionMode(initialId) {
+      selectionMode = true;
+      selectedIds.clear();
+      if (initialId !== undefined && initialId !== null) {
+        selectedIds.add(String(initialId));
+      }
+      document.body.classList.add("selection-mode");
+      document.getElementById("fab-add").classList.add("hidden-fab");
+      document.getElementById("bulk-bar").classList.add("active");
+      updateBulkCount();
+      pushHistoryState("selection");
+      renderLibrary();
+    }
+
+    function exitSelectionMode() {
+      selectionMode = false;
+      selectedIds.clear();
+      document.body.classList.remove("selection-mode");
+      document.getElementById("fab-add").classList.remove("hidden-fab");
+      document.getElementById("bulk-bar").classList.remove("active");
+      renderLibrary();
+    }
+
+    function toggleSelectId(id) {
+      const key = String(id);
+      if (selectedIds.has(key)) selectedIds.delete(key);
+      else selectedIds.add(key);
+      if (selectedIds.size === 0) {
+        exitSelectionMode();
+        return;
+      }
+      updateBulkCount();
+      if (!syncCardSelectionUI(key)) {
+        renderLibrary();
+      }
+    }
+
+    function updateBulkCount() {
+      document.getElementById("bulk-count").textContent = `${selectedIds.size} selecionada(s)`;
+    }
+
+    function renderLibrary() {
+      updateClearFiltersBtn();
+      const host = document.getElementById("library-content");
+      const list = getFilteredObras();
+
+      if (list.length === 0) {
+        const isEmptyDB = obras.length === 0;
+        host.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon-box">📚</div>
+            <p class="empty-text">${isEmptyDB ? "Adicione sua primeira obra!" : "Nenhuma obra encontrada neste filtro."}</p>
+            <div class="empty-actions">
+              <button type="button" class="btn-primary" id="empty-add-btn">+ Adicionar obra</button>
+              <button type="button" class="btn-secondary" id="empty-restore-btn">Restaurar Backup JSON</button>
+            </div>
+          </div>
+        `;
+        document.getElementById("empty-add-btn").addEventListener("click", () => openObraModal());
+        document.getElementById("empty-restore-btn").addEventListener("click", () => {
+          jsonImportMode = "replace";
+          document.getElementById("hidden-json-input").click();
+        });
+        return;
+      }
+
+      const grid = document.createElement("div");
+      grid.className = "obras-grid";
+
+      list.forEach(obra => {
+        const isSelected = selectedIds.has(String(obra.id));
+        const card = document.createElement("article");
+        card.dataset.obraId = String(obra.id);
+        card.className = "obra-card" + (isSelected ? " selected" : "");
+
+        const lido = Number(obra.capituloLido) || 0;
+        const total = Number(obra.totalCapitulos) || 0;
+        const pct = total > 0 ? Math.min(100, Math.round((lido / total) * 100)) : 0;
+        const primaryLink = obra.link || (obra.scans && obra.scans[0] && obra.scans[0].link) || "";
+
+        card.innerHTML = `
+          <div class="obra-select-badge">${isSelected ? "✓" : ""}</div>
+          <div class="obra-cover-wrap">
+            ${obra.capa
+              ? `<img src="${obra.capa}" alt="${obra.nome}" decoding="async" />`
+              : `<span class="obra-cover-placeholder">📖</span>`}
+            <span class="obra-status-tag">${obra.status || "Quero ler"}</span>
+            <button type="button" class="obra-fav-btn" title="Favoritar">${obra.favorita ? "★" : "☆"}</button>
+          </div>
+          <div class="obra-body">
+            <div class="obra-title">${obra.nome}</div>
+            <div class="obra-meta-row">
+              <span class="obra-meta">${obra.scan ? obra.scan + " • " : ""}Cap. ${lido}${total > 0 ? "/" + total : ""}</span>
+              <button type="button" class="btn-plus-cap" title="Marcar +1 capítulo">+1</button>
+            </div>
+            ${total > 0 ? `
+              <div class="obra-meta-row">
+                <span class="obra-remain">${pct}% • faltam ${Math.max(0, total - lido)} cap.</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+            ` : ""}
+            <div class="obra-tags">${(obra.categorias || []).map(c => `<span class="obra-tag">${c}</span>`).join("")}</div>
+            <div class="obra-actions">
+              ${primaryLink ? `<button type="button" class="btn-read">Ler</button>` : ""}
+              <button type="button" class="btn-edit">Editar</button>
+              <button type="button" class="btn-del">Excluir</button>
+            </div>
+          </div>
+        `;
+
+        // Long press apenas para ativar o modo de seleção; após ativo, um clique simples alterna
+        let pressTimer = null;
+        let activatedByLongPress = false;
+        const startPress = (e) => {
+          if (selectionMode) return;
+          if (e.button !== undefined && e.button !== 0) return;
+          activatedByLongPress = false;
+          pressTimer = setTimeout(() => {
+            activatedByLongPress = true;
+            enterSelectionMode(obra.id);
+          }, 450);
+        };
+        const cancelPress = () => {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        };
+
+        card.addEventListener("pointerdown", startPress);
+        card.addEventListener("pointerup", cancelPress);
+        card.addEventListener("pointerleave", cancelPress);
+        card.addEventListener("pointercancel", cancelPress);
+        card.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          if (!selectionMode) {
+            activatedByLongPress = true;
+            enterSelectionMode(obra.id);
+          }
+        });
+
+        const handleCardClick = () => {
+          if (activatedByLongPress) {
+            activatedByLongPress = false;
+            return;
+          }
+          if (selectionMode) {
+            toggleSelectId(obra.id);
+            return;
+          }
+          openDetailModal(obra.id);
+        };
+
+        card.querySelector(".obra-cover-wrap").addEventListener("click", handleCardClick);
+        card.querySelector(".obra-title").addEventListener("click", handleCardClick);
+
+        card.querySelector(".obra-fav-btn").addEventListener("click", async (e) => {
+          e.stopPropagation();
+          obra.favorita = !obra.favorita;
+          obra.atualizadoEm = new Date().toISOString();
+          await persistAll();
+          render();
+        });
+
+        card.querySelector(".btn-plus-cap").addEventListener("click", async (e) => {
+          e.stopPropagation();
+          obra.capituloLido = (Number(obra.capituloLido) || 0) + 1;
+          if (obra.totalCapitulos > 0 && obra.capituloLido >= obra.totalCapitulos) {
+            obra.status = "Concluída";
+          } else if (obra.status === "Quero ler") {
+            obra.status = "Lendo";
+          }
+          obra.atualizadoEm = new Date().toISOString();
+          await persistAll();
+          render();
+          showToast(`${obra.nome}: Cap. ${obra.capituloLido}`);
+        });
+
+        const readBtn = card.querySelector(".btn-read");
+        if (readBtn) {
+          readBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openReadChooser(obra);
+          });
+        }
+
+        card.querySelector(".btn-edit").addEventListener("click", (e) => {
+          e.stopPropagation();
+          openObraModal(obra);
+        });
+
+        card.querySelector(".btn-del").addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (!confirm(`Mover "${obra.nome}" para a lixeira (30 dias)?`)) return;
+          lixeira.push({ ...obra, excluidaEm: new Date().toISOString() });
+          obras = obras.filter(x => String(x.id) !== String(obra.id));
+          await persistAll();
+          render();
+          showToast("Obra movida para a lixeira.");
+        });
+
+        grid.appendChild(card);
+      });
+
+      host.innerHTML = "";
+      host.appendChild(grid);
+    }
+
+    function render() {
+      renderContinueCard();
+      renderStats();
+      renderCategories();
+      renderCategoryButtonsState();
+      renderScanFilter();
+      renderStatusPills();
+      renderLibrary();
+      renderBackupBanner();
+    }
+
+    function resizeImageFile(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return resolve("");
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const max = 520;
+            let w = img.width, h = img.height;
+            if (w > max || h > max) {
+              const r = Math.min(max / w, max / h);
+              w *= r; h *= r;
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", 0.78));
+          };
+          img.onerror = reject;
+          img.src = reader.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderCoverPreview(src) {
+      const box = document.getElementById("obra-capa-preview");
+      if (src) {
+        box.innerHTML = `<img src="${src}" alt="Capa" />`;
+      } else {
+        box.innerHTML = `<span style="font-size:28px;opacity:0.65;">📖</span>`;
+      }
+    }
+
+    function addScanRow(scan = "", link = "") {
+      const rows = document.getElementById("scan-rows");
+      const row = document.createElement("div");
+      row.className = "scan-row";
+      row.innerHTML = `
+        <input type="text" class="scan-name-input" placeholder="Nome da scan" value="${scan.replace(/"/g, "&quot;")}" />
+        <input type="url" class="scan-link-input" placeholder="https://link-da-scan..." value="${link.replace(/"/g, "&quot;")}" />
+        <button type="button" class="btn-small btn-remove-scan" title="Remover">✕</button>
+      `;
+      row.querySelector(".btn-remove-scan").addEventListener("click", () => {
+        if (rows.children.length > 1) {
+          row.remove();
+        } else {
+          row.querySelector(".scan-name-input").value = "";
+          row.querySelector(".scan-link-input").value = "";
+        }
+      });
+      rows.appendChild(row);
+    }
+
+    function openObraModal(obra = null) {
+      document.getElementById("modal-obra-title").textContent = obra ? "Editar obra" : "Adicionar nova obra";
+      document.getElementById("obra-id").value = obra ? obra.id : "";
+      document.getElementById("obra-nome").value = obra ? obra.nome : "";
+      document.getElementById("obra-cap-lido").value = obra ? (obra.capituloLido || "") : "";
+      document.getElementById("obra-cap-total").value = obra ? (obra.totalCapitulos || "") : "";
+      document.getElementById("obra-status").value = obra ? (obra.status || "Quero ler") : "Quero ler";
+      document.getElementById("obra-capa-file").value = "";
+
+      tempCoverData = obra ? (obra.capa || "") : "";
+      renderCoverPreview(tempCoverData);
+
+      const scanRows = document.getElementById("scan-rows");
+      scanRows.innerHTML = "";
+      const existingScans = (obra && Array.isArray(obra.scans) && obra.scans.length)
+        ? obra.scans
+        : ((obra && (obra.scan || obra.link)) ? [{ scan: obra.scan || "", link: obra.link || "" }] : [{ scan: "", link: "" }]);
+      existingScans.forEach(s => addScanRow(s.scan || "", s.link || ""));
+
+      const checksHost = document.getElementById("obra-cat-checks");
+      checksHost.innerHTML = "";
+      const selected = new Set(obra ? (obra.categorias || []) : (activeCategory !== "Todas" ? [activeCategory] : []));
+      allCategories().filter(c => c !== "Todas").forEach(cat => {
+        const lbl = document.createElement("label");
+        lbl.className = "cat-check-item";
+        lbl.innerHTML = `<input type="checkbox" value="${cat}" ${selected.has(cat) ? "checked" : ""}/> ${cat}`;
+        checksHost.appendChild(lbl);
+      });
+
+      document.getElementById("modal-obra").classList.add("open");
+      pushHistoryState("modal-obra");
+    }
+
+    document.getElementById("obra-capa-file").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      tempCoverData = await resizeImageFile(file);
+      renderCoverPreview(tempCoverData);
+    });
+
+    document.getElementById("btn-add-scan-row").addEventListener("click", () => addScanRow("", ""));
+
+    document.getElementById("form-obra").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("obra-id").value;
+      const nome = document.getElementById("obra-nome").value.trim();
+      if (!nome) return;
+
+      const existing = id ? obras.find(o => String(o.id) === String(id)) : null;
+      const file = document.getElementById("obra-capa-file").files[0];
+      let capa = tempCoverData || (existing ? existing.capa : "");
+      if (file) capa = await resizeImageFile(file);
+
+      const scanRows = Array.from(document.querySelectorAll("#scan-rows .scan-row")).map(row => ({
+        scan: row.querySelector(".scan-name-input").value.trim(),
+        link: row.querySelector(".scan-link-input").value.trim()
+      })).filter(s => s.scan || s.link);
+
+      const cats = Array.from(document.querySelectorAll("#obra-cat-checks input:checked")).map(i => i.value);
+
+      const item = {
+        id: existing ? existing.id : Date.now(),
+        nome,
+        scan: scanRows[0]?.scan || "",
+        link: scanRows[0]?.link || "",
+        scans: scanRows,
+        capa,
+        status: document.getElementById("obra-status").value,
+        capituloLido: Number(document.getElementById("obra-cap-lido").value) || 0,
+        totalCapitulos: Number(document.getElementById("obra-cap-total").value) || 0,
+        favorita: existing ? !!existing.favorita : false,
+        categorias: cats,
+        capitulosFavoritos: existing?.capitulosFavoritos || [],
+        comentarios: existing?.comentarios || "",
+        atualizadoEm: new Date().toISOString()
+      };
+
+      if (existing) {
+        obras = obras.map(o => String(o.id) === String(id) ? item : o);
+      } else {
+        obras.unshift(item);
+      }
+
+      await persistAll();
+      document.getElementById("modal-obra").classList.remove("open");
+      render();
+      showToast(existing ? "Obra atualizada!" : "Obra adicionada!");
+    });
+
+    function openDetailModal(id) {
+      const obra = obras.find(o => String(o.id) === String(id));
+      if (!obra) return;
+      currentDetailId = obra.id;
+      markLastOpened(obra.id);
+
+      const coverBox = document.getElementById("detail-cover");
+      coverBox.innerHTML = obra.capa ? `<img src="${obra.capa}" alt="${obra.nome}" />` : "📖";
+      document.getElementById("detail-title").textContent = obra.nome;
+      document.getElementById("detail-badges").textContent =
+        `${obra.status || "Quero ler"}${(obra.categorias || []).length ? " • " + obra.categorias.join(", ") : ""}`;
+
+      document.getElementById("detail-cap-lido").value = Number(obra.capituloLido) || 0;
+      document.getElementById("detail-cap-total").value = Number(obra.totalCapitulos) || 0;
+      document.getElementById("detail-fav-caps").value = obra.capitulosFavoritosTexto || (obra.capitulosFavoritos || []).join(", ");
+      document.getElementById("detail-comments").value = obra.comentarios || "";
+
+      const linksHost = document.getElementById("detail-scans-list");
+      const scans = (Array.isArray(obra.scans) && obra.scans.length)
+        ? obra.scans
+        : ((obra.scan || obra.link) ? [{ scan: obra.scan || "Scan", link: obra.link || "" }] : []);
+
+      if (!scans.length) {
+        linksHost.innerHTML = `<div style="font-size:12px;color:var(--text-muted);">Nenhuma scan cadastrada.</div>`;
+      } else {
+        linksHost.innerHTML = scans.map(s => `
+          <div class="scan-link-item">
+            <span>${s.scan || "Scan"}</span>
+            ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : `<span style="font-size:11px;">Sem link</span>`}
+          </div>
+        `).join("");
+      }
+
+      document.getElementById("modal-detail").classList.add("open");
+      pushHistoryState("modal-detail");
+    }
+
+    document.getElementById("detail-cap-minus").addEventListener("click", () => {
+      const inp = document.getElementById("detail-cap-lido");
+      inp.value = Math.max(0, (Number(inp.value) || 0) - 1);
+    });
+
+    document.getElementById("detail-cap-plus").addEventListener("click", () => {
+      const inp = document.getElementById("detail-cap-lido");
+      inp.value = (Number(inp.value) || 0) + 1;
+    });
+
+    document.getElementById("btn-detail-save").addEventListener("click", async () => {
+      const obra = obras.find(o => String(o.id) === String(currentDetailId));
+      if (!obra) return;
+      obra.capituloLido = Math.max(0, Number(document.getElementById("detail-cap-lido").value) || 0);
+      obra.totalCapitulos = Math.max(0, Number(document.getElementById("detail-cap-total").value) || 0);
+      obra.capitulosFavoritosTexto = document.getElementById("detail-fav-caps").value.trim();
+      obra.capitulosFavoritos = obra.capitulosFavoritosTexto
+        ? obra.capitulosFavoritosTexto.split(",").map(s => s.trim()).filter(Boolean)
+        : [];
+      obra.comentarios = document.getElementById("detail-comments").value.trim();
+      obra.atualizadoEm = new Date().toISOString();
+
+      await persistAll();
+      document.getElementById("modal-detail").classList.remove("open");
+      render();
+      showToast("Detalhes salvos!");
+    });
+
+    document.getElementById("btn-detail-edit-full").addEventListener("click", () => {
+      const obra = obras.find(o => String(o.id) === String(currentDetailId));
+      document.getElementById("modal-detail").classList.remove("open");
+      if (obra) openObraModal(obra);
+    });
+
+    // Configurações, Aparência, Backup e Lixeira
+    function switchSettingsTab(tabName) {
+      document.querySelectorAll(".settings-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tabName));
+      document.querySelectorAll(".settings-panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + tabName));
+      if (tabName === "backup") populatePartialExportOptions();
+      if (tabName === "lixeira") renderTrash();
+    }
+
+    function populatePartialExportOptions() {
+      const type = document.getElementById("partial-export-type").value;
+      const sel = document.getElementById("partial-export-value");
+      sel.innerHTML = "";
+      const options = type === "categoria"
+        ? allCategories().filter(c => c !== "Todas")
+        : ["Lendo", "Quero ler", "Concluída", "Em espera", "Dropada"];
+      options.forEach(opt => {
+        const o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        sel.appendChild(o);
+      });
+    }
+
+    function renderTrash() {
+      purgeExpiredTrash();
+      const host = document.getElementById("trash-list");
+      if (!lixeira.length) {
+        host.innerHTML = `<div class="trash-item"><span>A lixeira está vazia.</span></div>`;
+        return;
+      }
+      host.innerHTML = "";
+      lixeira.forEach(item => {
+        const left = daysLeftInTrash(item);
+        const div = document.createElement("div");
+        div.className = "trash-item";
+        div.innerHTML = `
+          <strong>${item.nome}</strong>
+          <span>Restam ${left} dia(s) antes da exclusão automática • Cap. ${item.capituloLido || 0}</span>
+          <div class="trash-actions">
+            <button type="button" class="btn-secondary btn-restore-trash">Restaurar</button>
+            <button type="button" class="btn-danger-outline btn-perm-del-trash">Excluir definitivamente</button>
+          </div>
+        `;
+        div.querySelector(".btn-restore-trash").addEventListener("click", async () => {
+          const { excluidaEm, ...clean } = item;
+          obras.unshift({ ...clean, atualizadoEm: new Date().toISOString() });
+          lixeira = lixeira.filter(x => String(x.id) !== String(item.id));
+          await persistAll();
+          renderTrash();
+          render();
+          showToast(`"${item.nome}" restaurada!`);
+        });
+        div.querySelector(".btn-perm-del-trash").addEventListener("click", async () => {
+          if (!confirm(`Excluir "${item.nome}" definitivamente? Essa ação não pode ser desfeita.`)) return;
+          lixeira = lixeira.filter(x => String(x.id) !== String(item.id));
+          await persistAll();
+          renderTrash();
+          showToast("Obra excluída definitivamente.");
+        });
+        host.appendChild(div);
+      });
+    }
+
+    function downloadJson(payload, filename) {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }
+
+    function normalizeImportedObra(raw, index) {
+      if (!raw || typeof raw !== "object" || !String(raw.nome || "").trim()) {
+        throw new Error(`Item ${index + 1} do backup não possui nome válido.`);
+      }
+      const fontes = Array.isArray(raw.scans) ? raw.scans.filter(f => f && (f.scan || f.link)) : [];
+      if (!fontes.length && (raw.scan || raw.link)) {
+        fontes.push({ scan: String(raw.scan || ""), link: String(raw.link || "") });
+      }
+      const statusValid = ["Quero ler", "Lendo", "Concluída", "Em espera", "Dropada"];
+      return {
+        id: raw.id ?? `imp-${Date.now()}-${index}`,
+        nome: String(raw.nome).trim(),
+        scan: String(raw.scan || fontes[0]?.scan || "").trim(),
+        link: String(raw.link || fontes[0]?.link || "").trim(),
+        scans: fontes,
+        capa: String(raw.capa || raw.capaBase64 || raw.capaUrl || ""),
+        status: statusValid.includes(raw.status) ? raw.status : "Quero ler",
+        capituloLido: Math.max(0, Number(raw.capituloLido) || 0),
+        totalCapitulos: Math.max(0, Number(raw.totalCapitulos) || 0),
+        favorita: Boolean(raw.favorita),
+        categorias: Array.isArray(raw.categorias) ? [...new Set(raw.categorias.map(String))] : [],
+        capitulosFavoritos: Array.isArray(raw.capitulosFavoritos) ? [...new Set(raw.capitulosFavoritos.map(String))] : [],
+        capitulosFavoritosTexto: String(raw.capitulosFavoritosTexto || ""),
+        comentarios: String(raw.comentarios || ""),
+        atualizadoEm: raw.atualizadoEm || new Date().toISOString()
+      };
+    }
+
+    function mergeObra(curr, inc) {
+      const scans = [...(curr.scans || [])];
+      (inc.scans || []).forEach(f => {
+        if (!scans.some(s => normalizeKey(s.scan) === normalizeKey(f.scan) && s.link === f.link)) {
+          scans.push(f);
+        }
+      });
+      return {
+        ...curr,
+        nome: inc.nome || curr.nome,
+        capa: inc.capa || curr.capa || "",
+        status: inc.status && inc.status !== "Quero ler" ? inc.status : (curr.status || inc.status),
+        capituloLido: Math.max(Number(curr.capituloLido) || 0, Number(inc.capituloLido) || 0),
+        totalCapitulos: Math.max(Number(curr.totalCapitulos) || 0, Number(inc.totalCapitulos) || 0),
+        favorita: Boolean(curr.favorita || inc.favorita),
+        scans,
+        scan: inc.scan || scans[0]?.scan || curr.scan || "",
+        link: inc.link || scans[0]?.link || curr.link || "",
+        categorias: [...new Set([...(curr.categorias || []), ...(inc.categorias || [])])],
+        capitulosFavoritos: [...new Set([...(curr.capitulosFavoritos || []), ...(inc.capitulosFavoritos || [])])],
+        comentarios: inc.comentarios || curr.comentarios || "",
+        atualizadoEm: new Date().toISOString()
+      };
+    }
+
+    document.getElementById("hidden-json-input").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const rawList = Array.isArray(parsed) ? parsed : (parsed.obras || parsed.works);
+        if (!Array.isArray(rawList)) throw new Error("Formato de backup JSON inválido.");
+
+        const imported = rawList.map((item, idx) => normalizeImportedObra(item, idx));
+        const importedTrash = Array.isArray(parsed.lixeira)
+          ? parsed.lixeira.map((item, idx) => normalizeImportedObra(item, idx))
+          : [];
+
+        if (jsonImportMode === "replace") {
+          if (!confirm(`Substituir biblioteca atual por ${imported.length} obra(s) do backup?`)) return;
+          obras = imported;
+          lixeira = importedTrash;
+          showToast(`Backup restaurado: ${obras.length} obra(s)!`);
+        } else if (jsonImportMode === "merge") {
+          let updated = 0, added = 0;
+          const byId = new Map(obras.map((o, i) => [String(o.id), i]));
+          const byName = new Map(obras.map((o, i) => [normalizeKey(o.nome), i]));
+
+          imported.forEach(item => {
+            const idx = byId.has(String(item.id)) ? byId.get(String(item.id)) : byName.get(normalizeKey(item.nome));
+            if (idx !== undefined) {
+              obras[idx] = mergeObra(obras[idx], item);
+              updated++;
+            } else {
+              obras.push(item);
+              added++;
+            }
+          });
+          showToast(`Mesclado: ${updated} atualizada(s), ${added} nova(s).`);
+        } else if (jsonImportMode === "new") {
+          const existingNames = new Set([...obras, ...lixeira].map(o => normalizeKey(o.nome)));
+          const onlyNew = imported.filter(item => !existingNames.has(normalizeKey(item.nome)));
+          obras.push(...onlyNew);
+          showToast(`${onlyNew.length} obra(s) nova(s) adicionada(s).`);
+        }
+
+        await persistAll();
+        document.getElementById("modal-settings").classList.remove("open");
+        render();
+      } catch (err) {
+        alert("Erro ao ler JSON: " + err.message);
+      } finally {
+        e.target.value = "";
+      }
+    });
+
+    // Eventos UI
+    document.getElementById("fab-add").addEventListener("click", () => openObraModal());
+    document.getElementById("btn-cancel-obra").addEventListener("click", () => {
+      document.getElementById("modal-obra").classList.remove("open");
+    });
+
+    document.getElementById("btn-open-settings").addEventListener("click", () => {
+      document.getElementById("modal-settings").classList.add("open");
+      pushHistoryState("modal-settings");
+    });
+    document.getElementById("btn-close-settings").addEventListener("click", () => {
+      document.getElementById("modal-settings").classList.remove("open");
+    });
+
+    document.querySelectorAll(".settings-tab").forEach(tab => {
+      tab.addEventListener("click", () => switchSettingsTab(tab.dataset.tab));
+    });
+
+    document.getElementById("btn-theme-dark").addEventListener("click", async () => {
+      prefs.theme = "dark";
+      applyPrefs();
+      await persistAll();
+    });
+
+    document.getElementById("btn-theme-light").addEventListener("click", async () => {
+      prefs.theme = "light";
+      applyPrefs();
+      await persistAll();
+    });
+
+    document.querySelectorAll(".palette-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        prefs.accent = btn.dataset.accent;
+        applyPrefs();
+        await persistAll();
+      });
+    });
+
+    document.getElementById("setting-cols").addEventListener("change", async (e) => {
+      prefs.columns = Number(e.target.value) || 3;
+      applyPrefs();
+      await persistAll();
+    });
+
+    document.getElementById("setting-reminder-days").addEventListener("change", async (e) => {
+      prefs.reminderDays = Number(e.target.value) || 7;
+      applyPrefs();
+      await persistAll();
+    });
+
+    const exportFullBackup = async () => {
+      prefs.lastBackupAt = new Date().toISOString();
+      await persistAll();
+      renderBackupBanner();
+      downloadJson({
+        formato: "LARYVAS_BACKUP",
+        versao: 4,
+        criadoEm: prefs.lastBackupAt,
+        obras,
+        lixeira
+      }, `LARYVAS-backup-${new Date().toISOString().slice(0, 10)}.json`);
+      showToast("Backup completo baixado!");
+    };
+
+    document.getElementById("btn-export-json").addEventListener("click", exportFullBackup);
+    document.getElementById("btn-quick-backup").addEventListener("click", exportFullBackup);
+
+    document.getElementById("partial-export-type").addEventListener("change", populatePartialExportOptions);
+
+    document.getElementById("btn-export-partial").addEventListener("click", () => {
+      const type = document.getElementById("partial-export-type").value;
+      const val = document.getElementById("partial-export-value").value;
+      if (!val) return showToast("Nenhuma opção disponível para exportar.");
+      const subset = type === "categoria"
+        ? obras.filter(o => (o.categorias || []).includes(val))
+        : obras.filter(o => o.status === val);
+      downloadJson({
+        formato: "LARYVAS_PARCIAL",
+        filtro: { tipo: type, valor: val },
+        criadoEm: new Date().toISOString(),
+        obras: subset
+      }, `LARYVAS-${type}-${normalizeKey(val).replace(/\s+/g, "-")}.json`);
+      showToast(`Exportadas ${subset.length} obra(s) de ${val}.`);
+    });
+
+    document.getElementById("btn-restore-replace").addEventListener("click", () => {
+      jsonImportMode = "replace";
+      document.getElementById("hidden-json-input").click();
+    });
+    document.getElementById("btn-restore-merge").addEventListener("click", () => {
+      jsonImportMode = "merge";
+      document.getElementById("hidden-json-input").click();
+    });
+    document.getElementById("btn-restore-new").addEventListener("click", () => {
+      jsonImportMode = "new";
+      document.getElementById("hidden-json-input").click();
+    });
+
+    document.getElementById("btn-empty-trash").addEventListener("click", async () => {
+      if (!lixeira.length) return;
+      if (!confirm("Esvaziar toda a lixeira permanentemente?")) return;
+      lixeira = [];
+      await persistAll();
+      renderTrash();
+      showToast("Lixeira esvaziada.");
+    });
+
+    // Ações em massa
+    document.getElementById("btn-bulk-select-all").addEventListener("click", () => {
+      const visible = getFilteredObras();
+      if (selectedIds.size === visible.length) {
+        selectedIds.clear();
+        exitSelectionMode();
+      } else {
+        visible.forEach(o => selectedIds.add(String(o.id)));
+        updateBulkCount();
+        renderLibrary();
+      }
+    });
+
+    document.getElementById("btn-bulk-cancel").addEventListener("click", exitSelectionMode);
+
+    document.getElementById("btn-bulk-status").addEventListener("click", () => {
+      bulkActionMode = "status";
+      document.getElementById("modal-bulk-title").textContent = `Alterar status (${selectedIds.size} obra(s))`;
+      document.getElementById("bulk-status-box").style.display = "block";
+      document.getElementById("bulk-cats-box").style.display = "none";
+      document.getElementById("modal-bulk").classList.add("open");
+    });
+
+    document.getElementById("btn-bulk-cats").addEventListener("click", () => {
+      bulkActionMode = "cats";
+      document.getElementById("modal-bulk-title").textContent = `Adicionar categorias (${selectedIds.size} obra(s))`;
+      document.getElementById("bulk-status-box").style.display = "none";
+      document.getElementById("bulk-cats-box").style.display = "block";
+      const box = document.getElementById("bulk-cat-checks");
+      box.innerHTML = "";
+      allCategories().filter(c => c !== "Todas").forEach(cat => {
+        const lbl = document.createElement("label");
+        lbl.className = "cat-check-item";
+        lbl.innerHTML = `<input type="checkbox" value="${cat}" /> ${cat}`;
+        box.appendChild(lbl);
+      });
+      document.getElementById("modal-bulk").classList.add("open");
+    });
+
+    document.getElementById("btn-bulk-delete").addEventListener("click", async () => {
+      if (!selectedIds.size) return;
+      if (!confirm(`Mover ${selectedIds.size} obra(s) selecionada(s) para a lixeira?`)) return;
+      const toTrash = obras.filter(o => selectedIds.has(String(o.id)));
+      toTrash.forEach(o => lixeira.push({ ...o, excluidaEm: new Date().toISOString() }));
+      obras = obras.filter(o => !selectedIds.has(String(o.id)));
+      await persistAll();
+      exitSelectionMode();
+      render();
+      showToast(`${toTrash.length} obra(s) movida(s) para a lixeira.`);
+    });
+
+    document.getElementById("btn-cancel-bulk").addEventListener("click", () => {
+      document.getElementById("modal-bulk").classList.remove("open");
+    });
+
+    document.getElementById("btn-apply-bulk").addEventListener("click", async () => {
+      if (bulkActionMode === "status") {
+        const newStatus = document.getElementById("bulk-status-select").value;
+        obras.forEach(o => {
+          if (selectedIds.has(String(o.id))) {
+            o.status = newStatus;
+            o.atualizadoEm = new Date().toISOString();
+          }
+        });
+        showToast("Status atualizado em massa!");
+      } else {
+        const chosen = Array.from(document.querySelectorAll("#bulk-cat-checks input:checked")).map(i => i.value);
+        if (!chosen.length) return showToast("Escolha pelo menos uma categoria.");
+        obras.forEach(o => {
+          if (selectedIds.has(String(o.id))) {
+            o.categorias = [...new Set([...(o.categorias || []), ...chosen])];
+            o.atualizadoEm = new Date().toISOString();
+          }
+        });
+        showToast("Categorias adicionadas em massa!");
+      }
+      await persistAll();
+      document.getElementById("modal-bulk").classList.remove("open");
+      exitSelectionMode();
+      render();
+    });
+
+    document.getElementById("btn-new-cat").addEventListener("click", async () => {
+      const name = prompt("Nome da nova categoria:");
+      if (!name || !name.trim()) return;
+      const clean = name.trim();
+      if (!allCategories().some(c => c.toLowerCase() === clean.toLowerCase())) {
+        categoriasCustom.push(clean);
+        await persistAll();
+      }
+      activeCategory = clean;
+      render();
+    });
+
+    document.querySelectorAll(".stat-card").forEach(card => {
+      card.addEventListener("click", () => {
+        activeStatus = card.dataset.stat;
+        pushHistoryState("stat:" + activeStatus);
+        render();
+      });
+    });
+
+    document.querySelectorAll(".status-pill").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activeStatus = btn.dataset.status;
+        pushHistoryState("status:" + activeStatus);
+        render();
+      });
+    });
+
+    document.getElementById("btn-clear-filters").addEventListener("click", () => {
+      activeCategory = "Todas";
+      activeStatus = "Todos";
+      activeScan = "Todas";
+      searchTerm = "";
+      document.getElementById("search-input").value = "";
+      render();
+    });
+
+    document.getElementById("scan-filter-select").addEventListener("change", (e) => {
+      activeScan = e.target.value;
+      renderLibrary();
+    });
+
+    document.getElementById("btn-rename-cat").addEventListener("click", async () => {
+      if (activeCategory === "Todas") return;
+      const oldName = activeCategory;
+      const nextRaw = prompt(`Renomear a categoria "${oldName}" para:`, oldName);
+      if (!nextRaw || !nextRaw.trim()) return;
+      const nextName = nextRaw.trim();
+      if (nextName === oldName) return;
+
+      categoriasCustom = categoriasCustom
+        .map(c => (c === oldName ? nextName : c))
+        .filter((c, i, arr) => arr.indexOf(c) === i);
+
+      obras.forEach(o => {
+        if (Array.isArray(o.categorias) && o.categorias.includes(oldName)) {
+          o.categorias = [...new Set(o.categorias.map(c => (c === oldName ? nextName : c)))];
+          o.atualizadoEm = new Date().toISOString();
+        }
+      });
+
+      activeCategory = nextName;
+      await persistAll();
+      render();
+      showToast(`Categoria renomeada para "${nextName}".`);
+    });
+
+    document.getElementById("btn-delete-cat").addEventListener("click", async () => {
+      if (activeCategory === "Todas") return;
+      const targetCat = activeCategory;
+      if (!confirm(`Excluir a categoria "${targetCat}"? As obras serão mantidas na biblioteca.`)) return;
+
+      categoriasCustom = categoriasCustom.filter(c => c !== targetCat);
+      obras.forEach(o => {
+        if (Array.isArray(o.categorias) && o.categorias.includes(targetCat)) {
+          o.categorias = o.categorias.filter(c => c !== targetCat);
+          o.atualizadoEm = new Date().toISOString();
+        }
+      });
+
+      activeCategory = "Todas";
+      await persistAll();
+      render();
+      showToast(`Categoria "${targetCat}" excluída.`);
+    });
+
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      searchTerm = e.target.value;
+      renderLibrary();
+    });
+
+    document.getElementById("sort-select").addEventListener("change", (e) => {
+      sortMode = e.target.value;
+      renderLibrary();
+    });
+
+    // Swipe horizontal para trocar de categoria
+    let touchStartX = 0;
+    const swipeArea = document.getElementById("swipe-area");
+    swipeArea.addEventListener("touchstart", (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    swipeArea.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(dx) < 65) return;
+      const cats = allCategories();
+      const idx = cats.indexOf(activeCategory);
+      if (dx < 0 && idx < cats.length - 1) {
+        activeCategory = cats[idx + 1];
+        render();
+      } else if (dx > 0 && idx > 0) {
+        activeCategory = cats[idx - 1];
+        render();
+      }
+    }, { passive: true });
+
+    // PWA / Service Worker seguro para ambientes HTTP/HTTPS
+    (function setupPWA() {
+      if (location.protocol !== "http:" && location.protocol !== "https:") return;
+      try {
+        const manifest = {
+          name: "LARYVAS — Sua biblioteca pessoal",
+          short_name: "LARYVAS",
+          start_url: ".",
+          display: "standalone",
+          background_color: "#0f0c18",
+          theme_color: "#7c3aed"
+        };
+        const mBlob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+        const link = document.createElement("link");
+        link.rel = "manifest";
+        link.href = URL.createObjectURL(mBlob);
+        document.head.appendChild(link);
+      } catch (_) {}
+    })();
+
+    let pendingReadUrl = "";
+
+    function openReadChooser(obra) {
+      const scans = (Array.isArray(obra.scans) && obra.scans.length)
+        ? obra.scans.filter(s => s && s.link)
+        : [];
+      const fallbackLink = obra.link || (scans[0] && scans[0].link) || "";
+      if (!scans.length && fallbackLink) {
+        scans.push({ scan: obra.scan || "Link principal", link: fallbackLink });
+      }
+      if (!scans.length) {
+        showToast("Essa obra não tem link cadastrado.");
+        return;
+      }
+
+      if ((prefs.readActionMode || "ask") === "direct" && scans.length === 1) {
+        window.open(scans[0].link, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      pendingReadUrl = scans[0].link;
+      document.getElementById("read-choice-title").textContent = `Ler "${obra.nome}"`;
+      document.getElementById("read-choice-subtitle").textContent =
+        "Escolha qual scan abrir ou copie/abra o link para usar o navegador de sua preferência (Chrome, Brave, Firefox, Safari, etc.):";
+
+      const scanOpts = document.getElementById("read-scan-options");
+      scanOpts.innerHTML = "";
+      scans.forEach((s, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "browser-choice-btn";
+        btn.innerHTML = `
+          <span>🌐 ${s.scan || `Opção ${idx + 1}`}</span>
+          <span class="browser-choice-sub">${s.link}</span>
+        `;
+        btn.addEventListener("click", () => {
+          pendingReadUrl = s.link;
+          document.getElementById("modal-read-choice").classList.remove("open");
+          window.open(s.link, "_blank", "noopener,noreferrer");
+        });
+        scanOpts.appendChild(btn);
+      });
+
+      const helpers = document.getElementById("read-browser-helpers");
+      helpers.innerHTML = `
+        <button type="button" class="browser-choice-btn" id="btn-copy-read-link">
+          <span>📋 Copiar link para colar em outro navegador</span>
+          <span class="browser-choice-sub">Chrome / Brave / Edge / etc.</span>
+        </button>
+        <button type="button" class="browser-choice-btn" id="btn-share-read-link">
+          <span>↗️ Compartilhar link (escolher app/navegador)</span>
+          <span class="browser-choice-sub">Menu do sistema</span>
+        </button>
+      `;
+
+      helpers.querySelector("#btn-copy-read-link").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(pendingReadUrl);
+          showToast("Link copiado! Cole no navegador desejado.");
+        } catch (_) {
+          prompt("Copie o link abaixo para abrir em outro navegador:", pendingReadUrl);
+        }
+      });
+
+      helpers.querySelector("#btn-share-read-link").addEventListener("click", async () => {
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: obra.nome, url: pendingReadUrl });
+          } catch (_) {}
+        } else {
+          window.open(pendingReadUrl, "_blank", "noopener,noreferrer");
+        }
+      });
+
+      document.getElementById("modal-read-choice").classList.add("open");
+      pushHistoryState("modal-read-choice");
+    }
+
+    document.getElementById("btn-cancel-read-choice").addEventListener("click", () => {
+      document.getElementById("modal-read-choice").classList.remove("open");
+    });
+
+    document.getElementById("setting-browser-choice").addEventListener("change", async (e) => {
+      prefs.readActionMode = e.target.value === "direct" ? "direct" : "ask";
+      await persistAll();
+      showToast(prefs.readActionMode === "direct" ? "Abertura direta ativada." : "Escolha ao clicar em Ler ativada.");
+    });
+
+    (function setupAndroidBackButton() {
+      const capApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+      if (!capApp || typeof capApp.addListener !== "function") return;
+
+      capApp.addListener("backButton", ({ canGoBack }) => {
+        const openModal = document.querySelector(".modal-backdrop.open");
+        if (openModal) {
+          openModal.classList.remove("open");
+          return;
+        }
+        if (selectionMode) {
+          exitSelectionMode();
+          return;
+        }
+        if (activeStatus !== "Todos") {
+          activeStatus = "Todos";
+          render();
+          return;
+        }
+        if (activeCategory !== "Todas") {
+          activeCategory = "Todas";
+          render();
+          return;
+        }
+        if (canGoBack) {
+          window.history.back();
+        } else if (typeof capApp.minimizeApp === "function") {
+          capApp.minimizeApp();
+        }
+      });
+    })();
+
+    // Inicialização
+    (async function init() {
+      db = await openDB();
+      obras = await readStore("biblioteca_v1", []);
+      lixeira = await readStore("lixeira_v1", []);
+      categoriasCustom = await readStore("categorias_v1", []);
+      const savedPrefs = await readStore("prefs_v1", null);
+      if (savedPrefs && typeof savedPrefs === "object") {
+        prefs = { ...prefs, ...savedPrefs };
+      }
+      const removedCount = purgeExpiredTrash();
+      if (removedCount > 0) {
+        await persistAll();
+      }
+      applyPrefs();
+      render();
+    })();
+  </script>
+</body>
+</html>
