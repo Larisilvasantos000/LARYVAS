@@ -1,294 +1,113 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  }
-
-body {
-background: #17151f;
-color: #f5f1fa;
-font-family: Arial, sans-serif;
-min-height: 100vh;
+/* LARYVAS V3.2 — catálogo redesenhado */
+:root{
+  color-scheme:dark;
+  --fundo:#111019;
+  --superficie:#1b1725;
+  --superficie-2:#241d31;
+  --borda:#382d49;
+  --texto:#f4effa;
+  --suave:#aaa0b8;
+  --roxo:#a879e8;
+  --roxo-claro:#d4b8ff;
+  --colunas-obras:3;
 }
-
-.topo {
-padding: 28px 20px;
-background: #211d2c;
-border-bottom: 1px solid #393044;
+*{box-sizing:border-box}
+html{background:var(--fundo);scroll-behavior:smooth}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -18%,#30213f 0,transparent 48%),var(--fundo);color:var(--texto);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.topo{padding:22px 18px 20px;background:linear-gradient(120deg,#211a2e,#171420);border-bottom:1px solid var(--borda)}
+.topo h1{margin:0;color:var(--roxo-claro);font-size:24px;letter-spacing:4px;font-weight:800}
+.topo p{margin:5px 0 0;color:var(--suave);font-size:12px;letter-spacing:.2px}
+main{width:min(100%,980px);margin:0 auto}
+.biblioteca{padding:22px 16px 30px}
+.biblioteca h2{font-size:23px;line-height:1.2;margin:0;font-weight:750;letter-spacing:-.5px}
+.biblioteca>.subtitulo{margin:7px 0 17px;color:var(--suave);font-size:13px;line-height:1.5}
+#painel-estatisticas{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px;margin:0 0 17px!important}
+.cartao-estatistica{min-width:0;padding:11px 9px!important;border:1px solid var(--borda)!important;border-radius:14px!important;background:linear-gradient(145deg,#282035,#1b1725)!important;box-shadow:0 5px 14px #0003}
+.icone-estatistica{font-size:17px!important;line-height:1.1}
+.numero-estatistica{margin:6px 0 2px!important;color:var(--roxo-claro)!important;font-size:21px!important;line-height:1.1}
+.nome-estatistica{margin:0!important;color:var(--suave)!important;font-size:10px!important;line-height:1.3}
+.area-descoberta{padding:12px;background:#1a1622;border:1px solid var(--borda);border-radius:16px;margin:0 0 13px}
+.linha-pesquisa{margin:0}
+.barra-pesquisa{margin:0!important}
+.barra-pesquisa input,#pesquisa{width:100%;min-height:46px;padding:12px 14px;border:1px solid #514263;border-radius:11px;background:#100e17;color:var(--texto);font-size:14px;outline:none}
+#pesquisa:focus{border-color:var(--roxo);box-shadow:0 0 0 3px #a879e822}
+#pesquisa::placeholder{color:#887e94}
+.linha-pesquisa small{display:block;margin:6px 2px 0!important;color:#93889e!important;font-size:10px!important}
+.filtros-biblioteca{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
+.biblioteca select,.controle-filtro{width:100%;min-width:0;min-height:42px;margin:0!important;padding:9px 30px 9px 10px;border:1px solid #493b5a;border-radius:10px;background:#292234;color:#eee5f8;font-size:12px}
+.botao-categorias{grid-column:1/-1;width:100%;min-height:38px;margin:0!important;padding:8px 12px;border:1px solid #59436f;border-radius:10px;background:#292034;color:var(--roxo-claro);font-size:12px;font-weight:650}
+.botao-adicionar{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin:0 0 14px!important;padding:13px 16px;border:1px solid #c09af2;border-radius:12px;background:linear-gradient(110deg,#8954c6,#a16bdc);color:white;font-size:14px;font-weight:750;box-shadow:0 5px 16px #0003}
+.botao-adicionar:active{transform:translateY(1px);filter:brightness(.94)}
+#lista-obras{display:grid;grid-template-columns:repeat(var(--colunas-obras,3),minmax(0,1fr));align-items:start;gap:12px;margin:0}
+.card-obra{position:relative;display:flex;flex-direction:column;min-width:0;overflow:hidden;padding:0;border:1px solid #392e49;border-radius:15px;background:linear-gradient(155deg,#241e30,#191622);box-shadow:0 7px 18px #0004;transition:transform .18s ease,border-color .18s ease}
+.card-obra:active{transform:scale(.985)}
+.card-capa-wrap{position:relative;width:100%;aspect-ratio:2/2.65;overflow:hidden;background:linear-gradient(145deg,#332641,#17131f)}
+.capa-obra{display:block;width:100%;height:100%;object-fit:cover;margin:0;border-radius:0;background:#30283b}
+.card-capa-wrap.sem-capa{display:grid;place-items:center;background:radial-gradient(circle,#49375d,#211a2b)}
+.capa-placeholder{font-size:clamp(28px,8vw,48px);opacity:.8}
+.selecao-obra{position:absolute;top:8px;left:8px;z-index:2;width:20px;height:20px;margin:0;padding:0;accent-color:var(--roxo);filter:drop-shadow(0 1px 3px #000)}
+.status-obra{position:absolute;right:7px;bottom:7px;max-width:calc(100% - 14px);overflow:hidden;padding:5px 8px;border:1px solid #ffffff30;border-radius:20px;background:#17121ddd;color:#eee5f8;font-size:9px;font-weight:750;text-overflow:ellipsis;white-space:nowrap;backdrop-filter:blur(8px)}
+.status-obra.status-lendo{background:#5b3c83eF;color:#fff}
+.status-obra.status-conclu-da,.status-obra.status-concluida{background:#285c4beF;color:#e4fff1}
+.status-obra.status-quero-ler{background:#765329eF;color:#fff0d5}
+.card-conteudo{display:flex;flex:1;flex-direction:column;gap:8px;min-width:0;padding:9px}
+.titulo-obra{display:-webkit-box;overflow:hidden;margin:0;color:#f4effa;font-size:clamp(10px,3vw,13px);font-weight:750;line-height:1.35;overflow-wrap:anywhere;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.tags-obra{display:flex;flex-wrap:wrap;gap:4px;max-height:42px;overflow:hidden}
+.tags-obra span{padding:3px 6px;border:1px solid #59436f;border-radius:20px;background:#30243d;color:#d9c2ff;font-size:8px;line-height:1.2}
+.fontes-obra{display:flex;flex-direction:column;gap:4px}
+.fonte-obra{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;padding:5px 6px;border:1px solid #40334f;border-radius:7px;background:#1d1827}
+.fonte-obra span{overflow:hidden;color:#b9aec6;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.fonte-obra a,.link-principal-obra{flex-shrink:0;margin:0;color:var(--roxo-claro);font-size:9px;font-weight:750;text-decoration:none}
+.progresso-obra{margin-top:1px}
+.progresso-legenda{margin-bottom:4px;color:#b7aabd;font-size:9px}
+.progresso-trilho{height:5px;overflow:hidden;border-radius:10px;background:#453951}
+.progresso-preenchimento{height:100%;border-radius:10px;background:linear-gradient(90deg,#8954c6,#d4b8ff)}
+.capitulos-favoritos{margin:0;color:#e6a9d5;font-size:9px;line-height:1.35}
+.acoes-obra{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:auto;padding-top:2px}
+.acao-obra{min-width:0;min-height:31px;padding:5px 4px;border:1px solid #59436f;border-radius:8px;background:#30243d;color:#eee5f8;font-size:9px;font-weight:700;line-height:1.2}
+.acao-editar{border-color:#8060a8;background:#3a2b4b}
+.acao-favorito{border-color:#8d6aaf;color:#e0c9ff}
+.acao-favorito[aria-pressed="true"]{background:#4a315e;color:#f0d9ff}
+.acao-excluir{grid-column:1/-1;min-height:27px;border-color:#684052;background:#35202b;color:#e8b7c9}
+.card-obra a{color:var(--roxo-claro)}
+@media(min-width:700px){
+ .card-conteudo{gap:9px;padding:11px}
+ .titulo-obra{font-size:13px}
+ .tags-obra span,.fonte-obra span,.fonte-obra a{font-size:10px}
+ .acao-obra{min-height:34px;font-size:10px}
 }
-
-.topo h1 {
-color: #c9a5ff;
-font-size: 27px;
-letter-spacing: 3px;
+.vazio{grid-column:1/-1;padding:48px 18px;text-align:center;color:var(--suave);border:1px dashed #493b5a;border-radius:15px;background:#1b1725}
+.vazio span{font-size:38px}
+.vazio h3{margin:12px 0 6px;color:#e9ddf5;font-size:16px}
+.vazio p{font-size:12px}
+#tela-configuracoes{padding:4px 0 24px!important}
+#tela-configuracoes h2{margin:0 0 7px!important;color:var(--roxo-claro)!important}
+#tela-configuracoes p{line-height:1.5}
+#tela-configuracoes button,#tela-configuracoes select{min-height:42px}
+#tela-configuracoes details{margin:12px 0!important;padding:13px!important;border:1px solid var(--borda)!important;border-radius:13px!important;background:#1c1825!important}
+#tela-configuracoes summary{padding:4px;color:var(--roxo-claro)!important;font-size:13px}
+#tela-configuracoes label{font-size:12px}
+#tela-configuracoes>button:first-child{width:auto!important;min-height:40px!important;padding:8px 12px!important}
+#tela-configuracoes #painel-acoes-lote,.painel-acoes-lote{margin:16px 0!important;padding:13px!important;border:1px solid var(--borda)!important;border-radius:13px!important;background:#1c1825!important}
+.painel-acoes-lote button,.painel-acoes-lote select{min-height:40px!important;font-size:11px!important}
+footer{padding:22px;text-align:center;color:#776d83;font-size:10px}
+@media(min-width:700px){
+ #painel-estatisticas{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+ .biblioteca{padding:28px 24px 38px}
+ .area-descoberta{padding:15px}
+ .filtros-biblioteca{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .botao-categorias{grid-column:auto}
+ #lista-obras{gap:16px}
+ .card-obra{padding:0}
 }
-
-.topo p {
-color: #aaa0b8;
-margin-top: 6px;
-font-size: 14px;
-}
-
-.biblioteca {
-padding: 22px 16px;
-}
-
-.biblioteca h2 {
-font-size: 22px;
-margin-bottom: 7px;
-}
-
-.subtitulo {
-color: #aaa0b8;
-font-size: 13px;
-margin-bottom: 22px;
-}
-
-.barra-pesquisa {
-margin-bottom: 24px;
-}
-
-.barra-pesquisa input {
-width: 100%;
-padding: 15px;
-border: 1px solid #51465e;
-border-radius: 12px;
-background: #292432;
-color: white;
-font-size: 15px;
-outline: none;
-}
-
-.barra-pesquisa input::placeholder {
-color: #a69bae;
-}
-
-.grade-obras {
-display: grid;
-grid-template-columns: repeat(var(--colunas-obras, 3), minmax(0, 1fr));
-gap: 13px;
-}
-
-.vazio {
-grid-column: 1 / -1;
-text-align: center;
-padding: 55px 15px;
-color: #aaa0b8;
-}
-
-.vazio span {
-font-size: 45px;
-}
-
-.vazio h3 {
-color: #e8ddf5;
-margin: 14px 0 8px;
-}
-
-.botao-adicionar {
-display: block;
-width: 100%;
-margin-top: 28px;
-padding: 16px;
-border: none;
-border-radius: 13px;
-background: #9560d8;
-color: white;
-font-size: 16px;
-font-weight: bold;
-}
-
-.botao-adicionar:active {
-background: #7543b5;
-}
-
-footer {
-padding: 25px;
-text-align: center;
-color: #81768e;
-font-size: 12px;
-}
-/* CARDS DAS OBRAS */
-
-.card-obra {
-background: #211d2c;
-border: 1px solid #393044;
-border-radius: 14px;
-padding: 10px;
-overflow: hidden;
-min-width: 0;
-}
-
-/* CAPAS */
-
-.capa-obra {
-display: block;
-width: 100%;
-aspect-ratio: 2 / 3;
-object-fit: cover;
-border-radius: 10px;
-margin-bottom: 10px;
-}
-
-/* TITULOS */
-
-.card-obra h3 {
-color: #e8ddf5;
-font-size: 14px;
-margin-bottom: 8px;
-overflow-wrap: anywhere;
-}
-
-/* INFORMACOES */
-
-.card-obra p {
-color: #aaa0b8;
-font-size: 12px;
-margin: 5px 0;
-}
-
-.card-obra a {
-color: #c9a5ff;
-font-size: 12px;
-display: inline-block;
-margin-top: 8px;
-}
-
-/* CELULARES */
-
-@media (max-width: 600px) {
-.grade-obras {
-grid-template-columns: repeat(var(--colunas-obras, 3), minmax(0, 1fr));
-}
-}
-/* CARDS - NOVO VISUAL */
-
-.card-obra {
-background: linear-gradient(145deg, #29213c, #1e192b);
-border: 1px solid #51406b;
-border-radius: 16px;
-padding: 12px;
-overflow: hidden;
-min-width: 0;
-box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-}
-
-/* CAPA */
-
-.capa-obra {
-display: block;
-width: 100%;
-aspect-ratio: 2 / 3;
-object-fit: cover;
-border-radius: 11px;
-margin-bottom: 12px;
-}
-
-/* TITULO */
-
-.card-obra h3 {
-color: #f2e8ff;
-font-size: 15px;
-margin-bottom: 9px;
-line-height: 1.4;
-}
-
-/* INFORMACOES */
-
-.card-obra p {
-color: #bcb0ca;
-font-size: 12px;
-margin: 6px 0;
-}
-
-/* LINK */
-
-.card-obra a {
-color: #d2adff;
-font-weight: bold;
-text-decoration: none;
-}
-
-/* BOTAO EXCLUIR */
-
-.card-obra button {
-cursor: pointer;
-font-weight: bold;
-}
-
-/* LARYVAS V3.1 — catálogo limpo, com configurações no topo */
-.biblioteca > h2 { margin: 0; }
-#lista-obras { align-items: start; }
-.card-obra { padding: 8px; border-radius: 13px; }
-.capa-obra { border-radius: 9px; margin-bottom: 8px; }
-.card-obra h3 { font-size: clamp(11px, 3.2vw, 14px); line-height: 1.25; }
-#painel-estatisticas { margin: 14px 0 18px !important; }
-#tela-configuracoes button { min-height: 42px; }
-#tela-configuracoes details { margin-top: 14px; }
-@media (max-width: 420px) {
-  .biblioteca { padding: 18px 12px; }
-  .grade-obras { gap: 9px; }
-  .card-obra { padding: 7px; }
-}
-
-
-/* LARYVAS V3.1.1 — ajustes de hierarquia e espaçamento da biblioteca */
-.biblioteca {
-  padding: 18px 14px 24px;
-}
-.biblioteca > .subtitulo {
-  margin-bottom: 14px;
-  line-height: 1.35;
-}
-#painel-estatisticas {
-  margin: 12px 0 16px !important;
-  gap: 10px !important;
-}
-.barra-pesquisa {
-  margin: 0 0 8px;
-}
-.barra-pesquisa input {
-  display: block;
-  min-height: 52px;
-}
-.barra-pesquisa + small {
-  display: block;
-  margin: 5px 2px 12px !important;
-  line-height: 1.3;
-}
-.biblioteca select {
-  display: block;
-  width: 100%;
-  min-height: 52px;
-  margin: 0 0 12px !important;
-}
-.botao-adicionar {
-  display: block;
-  width: 100%;
-  min-height: 54px;
-  margin: 8px 0 16px;
-  padding: 14px 18px;
-  border: 1px solid #b68af0;
-  border-radius: 13px;
-  background: #9560d8;
-  color: #fff;
-  font-size: 17px;
-  font-weight: 700;
-  box-shadow: 0 3px 10px rgba(0,0,0,.18);
-}
-#lista-obras {
-  margin-top: 0;
-  align-items: start;
-}
-@media (max-width: 420px) {
-  .biblioteca {
-    padding: 16px 12px 22px;
-  }
-  #painel-estatisticas {
-    gap: 8px !important;
-    margin: 10px 0 14px !important;
-  }
-  .botao-adicionar {
-    margin: 6px 0 14px;
-  }
+@media(max-width:380px){
+ .biblioteca{padding:18px 11px 24px}
+ #painel-estatisticas{gap:6px}
+ .cartao-estatistica{padding:9px 6px!important}
+ .numero-estatistica{font-size:19px!important}
+ .nome-estatistica{font-size:9px!important}
+ #lista-obras{gap:8px}
+ .card-obra{padding:0}
 }

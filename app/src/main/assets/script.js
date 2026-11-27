@@ -515,6 +515,29 @@ seletorOrdenacao.innerHTML = '<option value="padrao">Ordenação padrão</option
 seletorCategoria.insertAdjacentElement("afterend", seletorOrdenacao);
 seletorOrdenacao.addEventListener("change", () => { ordenacaoObras = seletorOrdenacao.value; mostrarObras(pesquisa.value); });
 
+
+// V3.2 — estrutura semântica da área de descoberta da biblioteca.
+const areaDescoberta = document.createElement("section");
+areaDescoberta.className = "area-descoberta";
+areaDescoberta.setAttribute("aria-label", "Pesquisar e filtrar obras");
+const linhaPesquisa = document.createElement("div");
+linhaPesquisa.className = "linha-pesquisa";
+const filtrosBiblioteca = document.createElement("div");
+filtrosBiblioteca.className = "filtros-biblioteca";
+const barraBuscaExistente = pesquisa.closest(".barra-pesquisa");
+if (barraBuscaExistente) linhaPesquisa.appendChild(barraBuscaExistente);
+else linhaPesquisa.appendChild(pesquisa);
+linhaPesquisa.appendChild(pesquisaAjuda);
+filtrosBiblioteca.append(seletorStatus, seletorCategoria, seletorOrdenacao, botaoGerenciarCategorias);
+areaDescoberta.append(linhaPesquisa, filtrosBiblioteca);
+painelEstatisticas.insertAdjacentElement("afterend", areaDescoberta);
+// O botão de inclusão deve aparecer antes da grade, não depois das 469 obras.
+listaObras.insertAdjacentElement("beforebegin", botaoAdicionar);
+seletorStatus.classList.add("controle-filtro");
+seletorCategoria.classList.add("controle-filtro");
+seletorOrdenacao.classList.add("controle-filtro");
+botaoGerenciarCategorias.classList.add("botao-categorias");
+
 // Seleção em lote e lixeira
 const painelAcoesLote = document.createElement("section");
 painelAcoesLote.style.cssText = "margin:12px 0 18px;padding:12px;border:1px solid #65517d;border-radius:12px;background:#292432;";
@@ -539,6 +562,8 @@ const abrirLixeira = botaoLote(`🗑️ Lixeira (${lixeira.length})`);
 linhaSelecao.append(selecionarVisiveis, limparSelecao);
 acoesLote.append(loteStatus, loteCategoria, loteExcluir, abrirLixeira);
 painelAcoesLote.append(linhaSelecao, contadorSelecao, acoesLote);
+painelAcoesLote.classList.add("painel-acoes-lote");
+painelAcoesLote.setAttribute("aria-label", "Ações em lote");
 listaObras.insertAdjacentElement("beforebegin", painelAcoesLote);
 
 // V3.1.1: manter "Adicionar obra" junto dos filtros, antes da grade.
@@ -986,6 +1011,7 @@ function atualizarEstatisticas() {
 
   estatisticas.forEach(item => {
     const cartao = document.createElement("div");
+cartao.className = "cartao-estatistica";
 cartao.style.cursor = "pointer";
 
 cartao.addEventListener("click", () => {
@@ -1002,10 +1028,12 @@ cartao.addEventListener("click", () => {
     `;
 
     const icone = document.createElement("div");
+    icone.className = "icone-estatistica";
     icone.textContent = item.icone;
     icone.style.fontSize = "22px";
 
     const numero = document.createElement("h3");
+    numero.className = "numero-estatistica";
     numero.textContent = item.valor;
     numero.style.cssText = `
       color:#d2adff;
@@ -1014,6 +1042,7 @@ cartao.addEventListener("click", () => {
     `;
 
     const nome = document.createElement("p");
+    nome.className = "nome-estatistica";
     nome.textContent = item.nome;
     nome.style.cssText = `
       color:#bcb0ca;
@@ -1075,180 +1104,183 @@ const resultado = obras.filter(obra => {
     const card = document.createElement("article");
     card.className = "card-obra";
 
+    const topoCard = document.createElement("div");
+    topoCard.className = "card-capa-wrap";
+
     const capaSegura = urlImagemSegura(obra.capa);
     if (capaSegura) {
       const capa = document.createElement("img");
       capa.className = "capa-obra";
       capa.src = capaSegura;
       capa.alt = "Capa de " + obra.nome;
-      capa.onerror = () => capa.style.display = "none";
-      card.appendChild(capa);
+      capa.loading = "lazy";
+      capa.onerror = () => {
+        capa.style.display = "none";
+        topoCard.classList.add("sem-capa");
+      };
+      topoCard.appendChild(capa);
+    } else {
+      topoCard.classList.add("sem-capa");
+      const placeholder = document.createElement("span");
+      placeholder.className = "capa-placeholder";
+      placeholder.textContent = "📖";
+      topoCard.appendChild(placeholder);
     }
-
-    const titulo = document.createElement("h3");
-    titulo.textContent = obra.nome;
-
-    const status = document.createElement("p");
-    status.textContent = "Status: " + obra.status;
 
     const selecionar = document.createElement("input");
-    selecionar.type = "checkbox"; selecionar.checked = obrasSelecionadas.has(String(obra.id));
+    selecionar.className = "selecao-obra";
+    selecionar.type = "checkbox";
+    selecionar.checked = obrasSelecionadas.has(String(obra.id));
     selecionar.setAttribute("aria-label", `Selecionar ${obra.nome}`);
-    selecionar.style.cssText = "width:20px;height:20px;accent-color:#c9a5ff;margin:4px 0 10px;";
-    selecionar.addEventListener("change", () => { selecionar.checked ? obrasSelecionadas.add(String(obra.id)) : obrasSelecionadas.delete(String(obra.id)); atualizarContadorSelecao(); });
-    card.append(selecionar, titulo, status);
+    selecionar.addEventListener("change", () => {
+      selecionar.checked
+        ? obrasSelecionadas.add(String(obra.id))
+        : obrasSelecionadas.delete(String(obra.id));
+      atualizarContadorSelecao();
+    });
+    topoCard.appendChild(selecionar);
+
+    const status = document.createElement("span");
+    status.className = "status-obra status-" + String(obra.status || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    status.textContent = obra.status || "Sem status";
+    topoCard.appendChild(status);
+    card.appendChild(topoCard);
+
+    const conteudo = document.createElement("div");
+    conteudo.className = "card-conteudo";
+
+    const titulo = document.createElement("h3");
+    titulo.className = "titulo-obra";
+    titulo.textContent = obra.nome;
+    titulo.title = obra.nome;
+    conteudo.appendChild(titulo);
+
     if (Array.isArray(obra.categorias) && obra.categorias.length) {
       const tags = document.createElement("div");
-      tags.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;";
-      obra.categorias.forEach(nome => { const tag=document.createElement("span"); tag.textContent=nome; tag.style.cssText="padding:4px 9px;border-radius:14px;background:#393044;border:1px solid #9570d8;color:#d9c2ff;font-size:12px;"; tags.appendChild(tag); });
-      card.appendChild(tags);
+      tags.className = "tags-obra";
+      obra.categorias.forEach(nome => {
+        const tag = document.createElement("span");
+        tag.textContent = nome;
+        tags.appendChild(tag);
+      });
+      conteudo.appendChild(tags);
     }
+
     const fontesCard = Array.isArray(obra.scans) && obra.scans.length
       ? obra.scans
       : (obra.scan || obra.link ? [{scan: obra.scan || "Scan", link: obra.link || ""}] : []);
     if (fontesCard.length) {
-      const listaLinks = document.createElement("div");
-      listaLinks.style.cssText = "display:flex;flex-direction:column;gap:7px;margin:8px 0;";
+      const fontes = document.createElement("div");
+      fontes.className = "fontes-obra";
       fontesCard.forEach((fonte, indice) => {
         const linha = document.createElement("div");
-        linha.style.cssText = "padding:8px;border:1px solid #65517d;border-radius:9px;background:#29213c;";
-        const nomeFonte = document.createElement("p");
+        linha.className = "fonte-obra";
+        const nomeFonte = document.createElement("span");
         nomeFonte.textContent = fonte.scan || `Scan ${indice + 1}`;
-        nomeFonte.style.cssText = "margin:0 0 5px;color:#c9a5ff;font-weight:bold;";
         linha.appendChild(nomeFonte);
         const destinoSeguro = urlHttpSegura(fonte.link);
         if (destinoSeguro) {
           const abrir = document.createElement("a");
-          abrir.href = destinoSeguro; abrir.textContent = "Abrir obra"; abrir.target = "_blank"; abrir.rel = "noopener noreferrer";
+          abrir.href = destinoSeguro;
+          abrir.textContent = "Visitar";
+          abrir.target = "_blank";
+          abrir.rel = "noopener noreferrer";
           linha.appendChild(abrir);
-        } else {
-          const semLink = document.createElement("small");
-          semLink.textContent = fonte.link ? "Link inválido ou não seguro" : "Link não informado";
-          linha.appendChild(semLink);
         }
-        listaLinks.appendChild(linha);
+        fontes.appendChild(linha);
       });
-      card.appendChild(listaLinks);
+      conteudo.appendChild(fontes);
     }
-if (obra.totalCapitulos > 0) {
-  const lidos = Number(obra.capituloLido) || 0;
-  const total = Number(obra.totalCapitulos);
-  const porcentagem = Math.min(100, Math.max(0, (lidos / total) * 100));
 
-  const infoProgresso = document.createElement("p");
-  infoProgresso.textContent =
-    `Progresso: ${lidos} / ${total} capítulos (${porcentagem.toFixed(1)}%)`;
+    if (Number(obra.totalCapitulos) > 0) {
+      const lidos = Number(obra.capituloLido) || 0;
+      const total = Number(obra.totalCapitulos);
+      const porcentagem = Math.min(100, Math.max(0, (lidos / total) * 100));
+      const progresso = document.createElement("div");
+      progresso.className = "progresso-obra";
+      const textoProgresso = document.createElement("div");
+      textoProgresso.className = "progresso-legenda";
+      textoProgresso.textContent = `${lidos} de ${total} capítulos`;
+      const trilho = document.createElement("div");
+      trilho.className = "progresso-trilho";
+      const preenchimento = document.createElement("div");
+      preenchimento.className = "progresso-preenchimento";
+      preenchimento.style.width = porcentagem + "%";
+      trilho.appendChild(preenchimento);
+      progresso.append(textoProgresso, trilho);
+      conteudo.appendChild(progresso);
+    }
 
-  const barra = document.createElement("div");
-  barra.style.cssText = `
-    width:100%;
-    height:8px;
-    background:#453951;
-    border-radius:10px;
-    overflow:hidden;
-    margin:8px 0 14px;
-  `;
+    if (Array.isArray(obra.capitulosFavoritos) && obra.capitulosFavoritos.length) {
+      const favCaps = document.createElement("p");
+      favCaps.className = "capitulos-favoritos";
+      favCaps.textContent = "♥ Capítulos favoritos: " + obra.capitulosFavoritos.join(", ");
+      conteudo.appendChild(favCaps);
+    }
 
-  const preenchimento = document.createElement("div");
-  preenchimento.style.cssText = `
-    width:${porcentagem}%;
-    height:100%;
-    background:#c9a5ff;
-    border-radius:10px;
-  `;
-
-  barra.appendChild(preenchimento);
-  card.append(infoProgresso, barra);
-}
-if (Array.isArray(obra.capitulosFavoritos) && obra.capitulosFavoritos.length) {
-  const favCaps = document.createElement("p");
-  favCaps.textContent = "♥ Capítulos favoritos: " + obra.capitulosFavoritos.join(", ");
-  favCaps.style.cssText = "color:#e6a9d5;font-size:11px;";
-  card.appendChild(favCaps);
-}
     const linkPrincipalSeguro = urlHttpSegura(obra.link);
     if (linkPrincipalSeguro) {
       const link = document.createElement("a");
+      link.className = "link-principal-obra";
       link.href = linkPrincipalSeguro;
       link.textContent = "Abrir obra";
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      card.appendChild(link);
+      conteudo.appendChild(link);
     }
 
+    const acoes = document.createElement("div");
+    acoes.className = "acoes-obra";
 
-const editar = document.createElement("button");
-editar.textContent = "Editar obra";
+    const editar = document.createElement("button");
+    editar.type = "button";
+    editar.className = "acao-obra acao-editar";
+    editar.textContent = "Editar";
+    editar.addEventListener("click", () => abrirFormulario(obra));
 
-editar.style.cssText = `
-  display:block;
-  width:100%;
-  margin-top:12px;
-  padding:9px;
-  border:1px solid #9570d8;
-  border-radius:8px;
-  background:#393044;
-  color:white;
-  font-weight:bold;
-`;
-
-editar.addEventListener("click", () => {
-  abrirFormulario(obra);
-});
-
-card.appendChild(editar);
-const favorito = document.createElement("button");
-
-favorito.textContent = obra.favorita
-  ? "★ Favorita"
-  : "☆ Favoritar";
-
-favorito.style.cssText = `
-  display:block;
-  width:100%;
-  margin-top:10px;
-  padding:9px;
-  border:1px solid #c9a5ff;
-  border-radius:8px;
-  background:#29213c;
-  color:#c9a5ff;
-  font-weight:bold;
-`;
-
-favorito.addEventListener("click", async () => {
-  const favoritoAnterior = obra.favorita;
-  obra.favorita = !obra.favorita;
-  obra.atualizadoEm = new Date().toISOString();
-  try {
-    await salvarObras();
-    mostrarObras(pesquisa.value);
-  } catch {
-    obra.favorita = favoritoAnterior;
-  }
-});
-
-card.appendChild(favorito);
-    const excluir = document.createElement("button");
-    excluir.textContent = "Excluir obra";
-    excluir.style.cssText = `
-      display:block;
-      margin-top:12px;
-      padding:9px;
-      border:0;
-      border-radius:8px;
-      background:#75435b;
-      color:white;
-    `;
-    excluir.addEventListener("click", async () => {
-      if (!confirm(`Mover "${obra.nome}" para a lixeira? Você poderá restaurá-la depois.`)) return;
-      const obrasAntes = obras; const lixeiraAntes = lixeira;
-      obras = obras.filter(item => String(item.id) !== String(obra.id));
-      lixeira = [...lixeira, { ...obra, excluidaEm: new Date().toISOString() }];
-      try { await gravarBibliotecaELixeira(obras, lixeira); await backupAutomaticoSeNecessario(obras, lixeira); atualizarBotaoLixeira(); mostrarObras(pesquisa.value); }
-      catch { obras = obrasAntes; lixeira = lixeiraAntes; alert("Não foi possível mover a obra para a lixeira."); }
+    const favorito = document.createElement("button");
+    favorito.type = "button";
+    favorito.className = "acao-obra acao-favorito";
+    favorito.textContent = obra.favorita ? "★ Favorita" : "☆ Favoritar";
+    favorito.setAttribute("aria-pressed", String(!!obra.favorita));
+    favorito.addEventListener("click", async () => {
+      const favoritoAnterior = obra.favorita;
+      obra.favorita = !obra.favorita;
+      obra.atualizadoEm = new Date().toISOString();
+      try {
+        await salvarObras();
+        mostrarObras(pesquisa.value);
+      } catch {
+        obra.favorita = favoritoAnterior;
+        alert("Não foi possível atualizar a favorita.");
+      }
     });
 
-    card.appendChild(excluir);
+    const excluir = document.createElement("button");
+    excluir.type = "button";
+    excluir.className = "acao-obra acao-excluir";
+    excluir.textContent = "Excluir";
+    excluir.addEventListener("click", async () => {
+      if (!confirm(`Mover "${obra.nome}" para a lixeira? Você poderá restaurá-la depois.`)) return;
+      const obrasAntes = obras;
+      const lixeiraAntes = lixeira;
+      obras = obras.filter(item => String(item.id) !== String(obra.id));
+      lixeira = [...lixeira, { ...obra, excluidaEm: new Date().toISOString() }];
+      try {
+        await gravarBibliotecaELixeira(obras, lixeira);
+        await backupAutomaticoSeNecessario(obras, lixeira);
+        atualizarBotaoLixeira();
+        mostrarObras(pesquisa.value);
+      } catch {
+        obras = obrasAntes;
+        lixeira = lixeiraAntes;
+        alert("Não foi possível mover a obra para a lixeira.");
+      }
+    });
+
+    acoes.append(editar, favorito, excluir);
+    conteudo.appendChild(acoes);
+    card.appendChild(conteudo);
     listaObras.appendChild(card);
   });
   atualizarContadorSelecao();
